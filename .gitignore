@@ -1,1 +1,42 @@
-./build
+# Compiled object files
+*.o
+
+# Compiled dynamic libraries
+*.so
+
+# Compiled static libraries
+*.a
+
+# Executable files
+*.out
+*.exe
+
+# Debug files
+*.dSYM/
+*.d
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*~
+
+# Editor and IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# CMake build directory
+/build/
+
+# Makefile generated files
+Makefile
+CMakeLists.txt.user
+
+# Logs
+*.log
+
+# Other
+tags

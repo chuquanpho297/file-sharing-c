@@ -1,4 +1,0 @@
-/Users/hunglai/practice/file-sharing/file-sharing-c/build/CMakeFiles/server.dir
-/Users/hunglai/practice/file-sharing/file-sharing-c/build/CMakeFiles/client.dir
-/Users/hunglai/practice/file-sharing/file-sharing-c/build/CMakeFiles/edit_cache.dir
-/Users/hunglai/practice/file-sharing/file-sharing-c/build/CMakeFiles/rebuild_cache.dir
