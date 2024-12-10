@@ -69,10 +69,17 @@ int main()
         fgets(command, MAX_COMMAND_LENGTH, stdin);
         command[strcspn(command, "\n")] = 0; // Remove newline
 
-        if (strcmp(command, "EXIT") == 0)
+        if (strcmp(command, "LOGOUT") == 0)
         {
-            send(sock, "EXIT", 4, 0);
-            break;
+            if (is_logged_in)
+            {
+                printf("Logging out...\n");
+                is_logged_in = 0;
+            }
+            else
+            {
+                printf("You are not logged in!\n");
+            }
         }
         else if (strcmp(command, "LOGIN") == 0)
         {
@@ -88,7 +95,14 @@ int main()
             // Check response and update login status
             recv(sock, buffer, BUFFER_SIZE, 0);
             printf("%s\n", buffer);
-            if (strstr(buffer, "\"responseCode\": 200") != NULL)
+
+            struct json_object *parsed_json;
+            struct json_object *response_code;
+
+            parsed_json = json_tokener_parse(buffer);
+            json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+
+            if (json_object_get_int(response_code) == 200)
             {
                 is_logged_in = 1;
                 strncpy(current_user, username, MAX_USERNAME - 1);
@@ -98,6 +112,8 @@ int main()
             {
                 printf("Wrong Username or Password!\n");
             }
+
+            json_object_put(parsed_json); // Free the JSON object
         }
         else if (strcmp(command, "REGISTER") == 0)
         {
@@ -119,7 +135,14 @@ int main()
             // Check response
             recv(sock, buffer, BUFFER_SIZE, 0);
             printf("%s\n", buffer);
-            if (strstr(buffer, "\"responseCode\": 201") != NULL)
+
+            struct json_object *parsed_json;
+            struct json_object *response_code;
+
+            parsed_json = json_tokener_parse(buffer);
+            json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+
+            if (json_object_get_int(response_code) == 201)
             {
                 is_logged_in = 1;
                 strncpy(current_user, username, MAX_USERNAME - 1);
@@ -129,6 +152,8 @@ int main()
             {
                 printf("User already exists!\n");
             }
+
+            json_object_put(parsed_json); // Free the JSON object
         }
         else if (strcmp(command, "HELP") == 0)
         {
@@ -182,6 +207,6 @@ void print_usage(void)
     printf("Commands:\n");
     printf("LOGIN - Log in to the system\n");
     printf("REGISTER - Register a new user\n");
+    printf("LOGOUT - Log out of the system\n");
     printf("HELP - Show usage\n");
-    printf("EXIT - Exit the program\n");
 }
