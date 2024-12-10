@@ -15,11 +15,11 @@
 #define MAX_PASSWORD 32
 
 // Database credentials
-const char *host = "localhost";
+const char *host = "127.0.0.1";
 const char *user = "root";
-const char *password = "your_password";
-const char *db_name = "your_database";
-
+const char *password = "1";
+const char *db_name = "file_sharing";
+const unsigned int port = 3306;
 typedef struct
 {
     char username[MAX_USERNAME];
@@ -46,7 +46,7 @@ void send_response(int socket, int code, const char *message);
 
 int main()
 {
-    MYSQL *conn = db_connect(host, user, password, db_name);
+    MYSQL *conn = db_connect(host, user, password, db_name, port);
     int server_fd;
     struct sockaddr_in address;
     int opt = 1;
