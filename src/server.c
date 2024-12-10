@@ -6,12 +6,19 @@
 #include <sys/socket.h>
 #include <pthread.h>
 #include <json-c/json.h>
+#include "db_utils.h"
 
 #define PORT 5555
 #define BUFFER_SIZE 4096
 #define MAX_CLIENTS 10
 #define MAX_USERNAME 32
 #define MAX_PASSWORD 32
+
+// Database credentials
+const char *host = "localhost";
+const char *user = "root";
+const char *password = "your_password";
+const char *db_name = "your_database";
 
 typedef struct
 {
@@ -39,6 +46,7 @@ void send_response(int socket, int code, const char *message);
 
 int main()
 {
+    MYSQL *conn = db_connect(host, user, password, db_name);
     int server_fd;
     struct sockaddr_in address;
     int opt = 1;
@@ -133,7 +141,7 @@ void *handle_client(void *arg)
 
         json_object_object_get_ex(parsed_json, "messageType", &message_type);
         const char *type = json_object_get_string(message_type);
-        printf("Received message type: %s\n", type);
+
         if (strcmp(type, "LOGIN") == 0)
         {
             handle_login(client, buffer);
@@ -210,8 +218,6 @@ void handle_register(client_t *client, const char *buffer)
     int exists = 0;
     for (int i = 0; i < user_count; i++)
     {
-        printf("Checking user %s\n", users[i].username);
-        printf("Username %s\n", username);
         if (strcmp(users[i].username, username) == 0)
         {
             exists = 1;
