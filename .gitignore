@@ -40,3 +40,5 @@ CMakeLists.txt.user
 
 # Other
 tags
+mysql_data
+init.sql
