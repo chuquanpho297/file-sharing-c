@@ -6,17 +6,20 @@ set(CMAKE_C_STANDARD 11)
 # Find required packages
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
+
 pkg_check_modules(JSONC REQUIRED json-c)
 
-# Add include directories
-include_directories(${JSONC_INCLUDE_DIRS})
-
 # Create executables
-add_executable(server src/server.c)
+add_executable(server src/server.c src/db_utils.c)
 add_executable(client src/client.c)
 
 # Link libraries
-target_link_libraries(server PRIVATE 
+target_link_libraries(server PRIVATE
     Threads::Threads
-    ${JSONC_LIBRARIES}
+    json-c
+    mysqlclient
+)
+
+target_link_libraries(client PRIVATE
+    json-c
 )

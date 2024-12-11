@@ -4,7 +4,7 @@
 #include <mysql/mysql.h>
 
 // Function to initialize the connection
-MYSQL *db_connect(const char *host, const char *user, const char *password, const char *db_name);
+MYSQL *db_connect(const char *host, const char *user, const char *password, const char *db_name, unsigned int port);
 
 // Function to close the connection
 void db_disconnect(MYSQL *conn);
