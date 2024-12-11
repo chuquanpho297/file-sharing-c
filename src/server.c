@@ -268,7 +268,7 @@ void handle_login(client_t *client, const char *buffer)
     {
         send_response(client->socket, 500, "Internal server error");
     }
-
+    mysql_stmt_close(stmt);
     json_object_put(parsed_json);
 }
 
