@@ -17,7 +17,7 @@
 // Database credentials
 const char *host = "127.0.0.1";
 const char *user = "root";
-const char *password = "1";
+const char *password = "123456";
 const char *db_name = "file_sharing";
 const unsigned int port = 3306;
 typedef struct
@@ -33,6 +33,7 @@ typedef struct
     int is_logged_in;
 } client_t;
 
+MYSQL *conn;
 // Simple user database (in memory)
 user_t users[100];
 int user_count = 0;
@@ -46,7 +47,13 @@ void send_response(int socket, int code, const char *message);
 
 int main()
 {
-    MYSQL *conn = db_connect(host, user, password, db_name, port);
+    conn = db_connect(host, user, password, db_name, port);
+    if (conn == NULL)
+    {
+        fprintf(stderr, "db_connect failed: %s\n", mysql_error(conn));
+        exit(EXIT_FAILURE);
+    }
+    printf("Database connection successful.\n");
     int server_fd;
     struct sockaddr_in address;
     int opt = 1;
@@ -175,28 +182,91 @@ void handle_login(client_t *client, const char *buffer)
     const char *username = json_object_get_string(username_obj);
     const char *password = json_object_get_string(password_obj);
 
-    pthread_mutex_lock(&users_mutex);
-    int found = 0;
-    for (int i = 0; i < user_count; i++)
+    const char *query = "SELECT Login(?, ?) AS Success;";
+    MYSQL_STMT *stmt = mysql_stmt_init(conn);
+    if (!stmt)
     {
-        if (strcmp(users[i].username, username) == 0 &&
-            strcmp(users[i].password, password) == 0)
-        {
-            found = 1;
-            break;
-        }
+        fprintf(stderr, "mysql_stmt_init failed: %s\n", mysql_error(conn));
+        send_response(client->socket, 500, "Internal server error");
+        mysql_close(conn);
+        return;
     }
+
+    if (mysql_stmt_prepare(stmt, query, strlen(query)))
+    {
+        fprintf(stderr, "mysql_stmt_prepare failed: %s\n", mysql_stmt_error(stmt));
+        send_response(client->socket, 500, "Internal server error");
+        mysql_stmt_close(stmt);
+        mysql_close(conn);
+        return;
+    }
+
+    pthread_mutex_lock(&users_mutex);
+    MYSQL_BIND bind[2];
+    memset(bind, 0, sizeof(bind));
+
+    bind[0].buffer_type = MYSQL_TYPE_STRING;
+    bind[0].buffer = (char *)username;
+    bind[0].buffer_length = strlen(username);
+
+    bind[1].buffer_type = MYSQL_TYPE_STRING;
+    bind[1].buffer = (char *)password;
+    bind[1].buffer_length = strlen(password);
+
+    if (mysql_stmt_bind_param(stmt, bind))
+    {
+        fprintf(stderr, "mysql_stmt_bind_param failed: %s\n", mysql_stmt_error(stmt));
+        send_response(client->socket, 500, "Internal server error");
+        mysql_stmt_close(stmt);
+        mysql_close(conn);
+        return;
+    }
+
+    if (mysql_stmt_execute(stmt))
+    {
+        fprintf(stderr, "mysql_stmt_execute failed: %s\n", mysql_stmt_error(stmt));
+        send_response(client->socket, 500, "Internal server error");
+        mysql_stmt_close(stmt);
+        mysql_close(conn);
+        return;
+    }
+
+    MYSQL_BIND result_bind[1];
+    memset(result_bind, 0, sizeof(result_bind));
+
+    int success;
+    result_bind[0].buffer_type = MYSQL_TYPE_LONG;
+    result_bind[0].buffer = (char *)&success;
+    result_bind[0].is_null = 0;
+    result_bind[0].length = 0;
+
+    if (mysql_stmt_bind_result(stmt, result_bind))
+    {
+        fprintf(stderr, "mysql_stmt_bind_result failed: %s\n", mysql_stmt_error(stmt));
+        send_response(client->socket, 500, "Internal server error");
+        mysql_stmt_close(stmt);
+        mysql_close(conn);
+        return;
+    }
+
     pthread_mutex_unlock(&users_mutex);
 
-    if (found)
+    if (mysql_stmt_fetch(stmt) == 0)
     {
-        strncpy(client->username, username, MAX_USERNAME - 1);
-        client->is_logged_in = 1;
-        send_response(client->socket, 200, "Login successful");
+        if (success == 1)
+        {
+            strncpy(client->username, username, MAX_USERNAME - 1);
+            client->is_logged_in = 1;
+            send_response(client->socket, 200, "Login successful");
+        }
+        else
+        {
+            send_response(client->socket, 401, "Invalid username or password");
+        }
     }
     else
     {
-        send_response(client->socket, 401, "Invalid credentials");
+        send_response(client->socket, 500, "Internal server error");
     }
 
     json_object_put(parsed_json);
@@ -214,23 +284,30 @@ void handle_register(client_t *client, const char *buffer)
     const char *username = json_object_get_string(username_obj);
     const char *password = json_object_get_string(password_obj);
 
-    pthread_mutex_lock(&users_mutex);
-    int exists = 0;
-    for (int i = 0; i < user_count; i++)
+    char query[256];
+    snprintf(query, 256, "Select InsertNewUser('%s', '%s') AS Success;", username, password);
+
+    if (mysql_query(conn, query))
     {
-        if (strcmp(users[i].username, username) == 0)
-        {
-            exists = 1;
-            break;
-        }
+        fprintf(stderr, "CALL REGISTER failed: %s\n", mysql_error(conn));
+        send_response(client->socket, 500, "Internal server error");
+        mysql_close(conn);
+        return;
     }
 
-    if (!exists && user_count < 100)
+    pthread_mutex_lock(&users_mutex);
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (result == NULL)
     {
-        strncpy(users[user_count].username, username, MAX_USERNAME - 1);
-        strncpy(users[user_count].password, password, MAX_PASSWORD - 1);
-        user_count++;
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn));
+        send_response(client->socket, 500, "Internal server error");
+        mysql_close(conn);
+        return;
+    }
 
+    MYSQL_ROW row = mysql_fetch_row(result);
+    if (row && strcmp(row[0], "1") == 0)
+    {
         strncpy(client->username, username, MAX_USERNAME - 1);
         client->is_logged_in = 1;
         send_response(client->socket, 201, "Registration successful");
@@ -239,6 +316,8 @@ void handle_register(client_t *client, const char *buffer)
     {
         send_response(client->socket, 409, "User already exists");
     }
+
+    mysql_free_result(result);
     pthread_mutex_unlock(&users_mutex);
 
     json_object_put(parsed_json);
