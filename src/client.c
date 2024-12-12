@@ -16,36 +16,36 @@
 
 // Function prototypes
 void print_usage(void);
-void handle_login(int sock, const char *username, const char *password, int *is_logged_in, char *current_user);
-void handle_register(int sock, const char *username, const char *password, int *is_logged_in, char *current_user);
-void handle_create_group(int sock, const char *group_name);
-void handle_list_all_groups(int sock);
-void handle_join_group(int sock, const char *group_name);
-void handle_invite_to_group(int sock, const char *group_name, const char *invited_name);
-void handle_leave_group(int sock, const char *group_name);
-void handle_list_group_members(int sock, const char *group_name);
+void handle_login(int sock, const char *username, const char *password, int *is_logged_in, char *current_user, struct json_object *j);
+void handle_register(int sock, const char *username, const char *password, int *is_logged_in, char *current_user, struct json_object *j);
+void handle_create_group(int sock, const char *group_name, struct json_object *j);
+void handle_list_all_groups(int sock, struct json_object *j);
+void handle_join_group(int sock, const char *group_name, struct json_object *j);
+void handle_invite_to_group(int sock, const char *group_name, const char *invited_name, struct json_object *j);
+void handle_leave_group(int sock, const char *group_name, struct json_object *j);
+void handle_list_group_members(int sock, const char *group_name, struct json_object *j);
 void print_table_member(struct json_object *list_of_members_array, const char *group_name);
-void handle_list_invitations(int sock);
+void handle_list_invitations(int sock, struct json_object *j);
 void print_invitation_list(struct json_object *list_of_invitations);
-void handle_remove_member(int sock, const char *group_name, const char *member_name);
-void handle_approval(int sock, const char *group_name, const char *requester, const char *decision);
-void handle_join_request_status(int sock);
+void handle_remove_member(int sock, const char *group_name, const char *member_name, struct json_object *j);
+void handle_approval(int sock, const char *group_name, const char *requester, const char *decision, struct json_object *j);
+void handle_join_request_status(int sock, struct json_object *j);
 void print_join_request_status(struct json_object *join_request_status_array);
-void handle_join_request_list(int sock, const char *group_name);
+void handle_join_request_list(int sock, const char *group_name, struct json_object *j);
 void print_join_request_list(struct json_object *join_request_list_array, const char *group_name);
-void handle_folder_content(int sock, const char *group_name, const char *folder_name);
+void handle_folder_content(int sock, const char *group_name, const char *folder_name, struct json_object *j);
 void print_table_files(struct json_object *folder_content_array, const char *folder_name, const char *group_name);
-void handle_create_folder(int sock, const char *group_name, const char *folder_name);
-void handle_folder_rename(int sock, const char *group_name, const char *folder_name, const char *new_name);
-void handle_folder_copy(int sock, const char *from_group, const char *to_group, const char *folder_name);
-void handle_folder_move(int sock, const char *from_group, const char *to_group, const char *folder_name);
-void handle_folder_delete(int sock, const char *group_name, const char *folder_name);
-void handle_upload_file(int sock, const char *group_name, const char *folder_name, const char *file_path);
-void handle_download_file(int sock, const char *group_name, const char *folder_name, const char *file_name);
-void handle_file_rename(int sock, const char *group_name, const char *folder_name, const char *file_name, const char *new_name);
-void handle_file_copy(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name);
-void handle_file_move(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name);
-void handle_file_delete(int sock, const char *group_name, const char *folder_name, const char *file_name);
+void handle_create_folder(int sock, const char *group_name, const char *folder_name, struct json_object *j);
+void handle_folder_rename(int sock, const char *group_name, const char *folder_name, const char *new_name, struct json_object *j);
+void handle_folder_copy(int sock, const char *from_group, const char *to_group, const char *folder_name, struct json_object *j);
+void handle_folder_move(int sock, const char *from_group, const char *to_group, const char *folder_name, struct json_object *j);
+void handle_folder_delete(int sock, const char *group_name, const char *folder_name, struct json_object *j);
+void handle_upload_file(int sock, const char *group_name, const char *folder_name, const char *file_path, struct json_object *j);
+void handle_download_file(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *j);
+void handle_file_rename(int sock, const char *group_name, const char *folder_name, const char *file_name, const char *new_name, struct json_object *j);
+void handle_file_copy(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *j);
+void handle_file_move(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *j);
+void handle_file_delete(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *j);
 
 int main()
 {
@@ -98,20 +98,30 @@ int main()
         // Get command from user
         fgets(command, MAX_COMMAND_LENGTH, stdin);
         command[strcspn(command, "\n")] = 0; // Remove newline
-
         if (strcmp(command, "LOGOUT") == 0)
         {
             if (is_logged_in)
             {
                 printf("Logging out...\n");
                 is_logged_in = 0;
+                strcpy(current_user, "");
             }
             else
             {
                 printf("You are not logged in!\n");
             }
+            continue;
         }
-        else if (strcmp(command, "LOGIN") == 0)
+        else if (strcmp(command, "HELP") == 0)
+        {
+            print_usage();
+            continue;
+        }
+
+        struct json_object *jobj = json_object_new_object();
+        json_object_object_add(jobj, "username", json_object_new_string(current_user));
+
+        if (strcmp(command, "LOGIN") == 0)
         {
             char username[MAX_USERNAME], password[MAX_PASSWORD];
             printf("Enter username: ");
@@ -120,7 +130,7 @@ int main()
             scanf("%s", password);
             getchar(); // Consume newline
 
-            handle_login(sock, username, password, &is_logged_in, current_user);
+            handle_login(sock, username, password, &is_logged_in, current_user, jobj);
         }
         else if (strcmp(command, "REGISTER") == 0)
         {
@@ -137,7 +147,7 @@ int main()
             scanf("%s", password);
             getchar(); // Consume newline
 
-            handle_register(sock, username, password, &is_logged_in, current_user);
+            handle_register(sock, username, password, &is_logged_in, current_user, jobj);
         }
         else if (strcmp(command, "CREATE_GROUP") == 0)
         {
@@ -152,7 +162,7 @@ int main()
             scanf("%s", group_name);
             getchar(); // Consume newline
 
-            handle_create_group(sock, group_name);
+            handle_create_group(sock, group_name, jobj);
         }
         else if (strcmp(command, "LIST_ALL_GROUPS") == 0)
         {
@@ -162,7 +172,7 @@ int main()
                 continue;
             }
 
-            handle_list_all_groups(sock);
+            handle_list_all_groups(sock, jobj);
         }
         else if (strcmp(command, "JOIN_GROUP") == 0)
         {
@@ -177,7 +187,7 @@ int main()
             scanf("%s", group_name);
             getchar(); // Consume newline
 
-            handle_join_group(sock, group_name);
+            handle_join_group(sock, group_name, jobj);
         }
         else if (strcmp(command, "INVITE_TO_GROUP") == 0)
         {
@@ -196,7 +206,7 @@ int main()
             scanf("%s", invited_name);
             getchar(); // Consume newline
 
-            handle_invite_to_group(sock, group_name, invited_name);
+            handle_invite_to_group(sock, group_name, invited_name, jobj);
         }
         else if (strcmp(command, "LIST_GROUP_MEMBERS") == 0)
         {
@@ -211,7 +221,7 @@ int main()
             scanf("%s", group_name);
             getchar(); // Consume newline
 
-            handle_list_group_members(sock, group_name);
+            handle_list_group_members(sock, group_name, jobj);
         }
         else if (strcmp(command, "LIST_INVITATION") == 0)
         {
@@ -221,7 +231,7 @@ int main()
                 continue;
             }
 
-            handle_list_invitations(sock);
+            handle_list_invitations(sock, jobj);
         }
         else if (strcmp(command, "REMOVE_MEMBER") == 0)
         {
@@ -240,7 +250,7 @@ int main()
             scanf("%s", member_name);
             getchar(); // Consume newline
 
-            handle_remove_member(sock, group_name, member_name);
+            handle_remove_member(sock, group_name, member_name, jobj);
         }
         else if (strcmp(command, "APPROVAL") == 0)
         {
@@ -263,7 +273,7 @@ int main()
             scanf("%s", decision);
             getchar(); // Consume newline
 
-            handle_approval(sock, group_name, requester, decision);
+            handle_approval(sock, group_name, requester, decision, jobj);
         }
         else if (strcmp(command, "JOIN_REQUEST_STATUS") == 0)
         {
@@ -273,7 +283,7 @@ int main()
                 continue;
             }
 
-            handle_join_request_status(sock);
+            handle_join_request_status(sock, jobj);
         }
         else if (strcmp(command, "JOIN_REQUEST_LIST") == 0)
         {
@@ -288,7 +298,7 @@ int main()
             scanf("%s", group_name);
             getchar(); // Consume newline
 
-            handle_join_request_list(sock, group_name);
+            handle_join_request_list(sock, group_name, jobj);
         }
         else if (strcmp(command, "FOLDER_CONTENT") == 0)
         {
@@ -307,7 +317,7 @@ int main()
             scanf("%s", folder_name);
             getchar(); // Consume newline
 
-            handle_folder_content(sock, group_name, folder_name);
+            handle_folder_content(sock, group_name, folder_name, jobj);
         }
         else if (strcmp(command, "CREATE_FOLDER") == 0)
         {
@@ -326,7 +336,7 @@ int main()
             scanf("%s", folder_name);
             getchar(); // Consume newline
 
-            handle_create_folder(sock, group_name, folder_name);
+            handle_create_folder(sock, group_name, folder_name, jobj);
         }
         else if (strcmp(command, "FOLDER_RENAME") == 0)
         {
@@ -349,7 +359,7 @@ int main()
             scanf("%s", new_name);
             getchar(); // Consume newline
 
-            handle_folder_rename(sock, group_name, folder_name, new_name);
+            handle_folder_rename(sock, group_name, folder_name, new_name, jobj);
         }
         else if (strcmp(command, "FOLDER_COPY") == 0)
         {
@@ -372,7 +382,7 @@ int main()
             scanf("%s", folder_name);
             getchar(); // Consume newline
 
-            handle_folder_copy(sock, from_group, to_group, folder_name);
+            handle_folder_copy(sock, from_group, to_group, folder_name, jobj);
         }
         else if (strcmp(command, "FOLDER_MOVE") == 0)
         {
@@ -395,7 +405,7 @@ int main()
             scanf("%s", folder_name);
             getchar(); // Consume newline
 
-            handle_folder_move(sock, from_group, to_group, folder_name);
+            handle_folder_move(sock, from_group, to_group, folder_name, jobj);
         }
         else if (strcmp(command, "FOLDER_DELETE") == 0)
         {
@@ -414,7 +424,7 @@ int main()
             scanf("%s", folder_name);
             getchar(); // Consume newline
 
-            handle_folder_delete(sock, group_name, folder_name);
+            handle_folder_delete(sock, group_name, folder_name, jobj);
         }
         else if (strcmp(command, "UPLOAD_FILE") == 0)
         {
@@ -438,7 +448,7 @@ int main()
             scanf("%s", folder_name);
             getchar(); // Consume newline
 
-            handle_upload_file(sock, group_name, folder_name, file_path);
+            handle_upload_file(sock, group_name, folder_name, file_path, jobj);
         }
         else if (strcmp(command, "DOWNLOAD_FILE") == 0)
         {
@@ -461,7 +471,7 @@ int main()
             scanf("%s", file_name);
             getchar(); // Consume newline
 
-            handle_download_file(sock, group_name, folder_name, file_name);
+            handle_download_file(sock, group_name, folder_name, file_name, jobj);
         }
         else if (strcmp(command, "FILE_RENAME") == 0)
         {
@@ -488,7 +498,7 @@ int main()
             scanf("%s", new_name);
             getchar(); // Consume newline
 
-            handle_file_rename(sock, group_name, folder_name, file_name, new_name);
+            handle_file_rename(sock, group_name, folder_name, file_name, new_name, jobj);
         }
         else if (strcmp(command, "FILE_COPY") == 0)
         {
@@ -519,7 +529,7 @@ int main()
             scanf("%s", file_name);
             getchar(); // Consume newline
 
-            handle_file_copy(sock, from_group, to_group, from_folder, to_folder, file_name);
+            handle_file_copy(sock, from_group, to_group, from_folder, to_folder, file_name, jobj);
         }
         else if (strcmp(command, "FILE_MOVE") == 0)
         {
@@ -550,7 +560,7 @@ int main()
             scanf("%s", file_name);
             getchar(); // Consume newline
 
-            handle_file_move(sock, from_group, to_group, from_folder, to_folder, file_name);
+            handle_file_move(sock, from_group, to_group, from_folder, to_folder, file_name, jobj);
         }
         else if (strcmp(command, "FILE_DELETE") == 0)
         {
@@ -573,16 +583,13 @@ int main()
             scanf("%s", file_name);
             getchar(); // Consume newline
 
-            handle_file_delete(sock, group_name, folder_name, file_name);
-        }
-        else if (strcmp(command, "HELP") == 0)
-        {
-            print_usage();
+            handle_file_delete(sock, group_name, folder_name, file_name, jobj);
         }
         else
         {
             printf("Command not recognized!\n");
             printf("Use command \"HELP\" to show the usage!\n");
+            json_object_put(jobj); // Free the JSON object
         }
     }
 
@@ -590,9 +597,8 @@ int main()
     return 0;
 }
 
-void handle_login(int sock, const char *username, const char *password, int *is_logged_in, char *current_user)
+void handle_login(int sock, const char *username, const char *password, int *is_logged_in, char *current_user, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "userName", json_object_new_string(username));
@@ -631,9 +637,8 @@ void handle_login(int sock, const char *username, const char *password, int *is_
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_register(int sock, const char *username, const char *password, int *is_logged_in, char *current_user)
+void handle_register(int sock, const char *username, const char *password, int *is_logged_in, char *current_user, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "userName", json_object_new_string(username));
@@ -672,9 +677,8 @@ void handle_register(int sock, const char *username, const char *password, int *
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_create_group(int sock, const char *group_name)
+void handle_create_group(int sock, const char *group_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -714,9 +718,8 @@ void handle_create_group(int sock, const char *group_name)
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_list_all_groups(int sock)
+void handle_list_all_groups(int sock, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jobj, "messageType", json_object_new_string("LIST_ALL_GROUPS"));
@@ -741,9 +744,8 @@ void handle_list_all_groups(int sock)
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_join_group(int sock, const char *group_name)
+void handle_join_group(int sock, const char *group_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -793,9 +795,8 @@ void handle_join_group(int sock, const char *group_name)
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_invite_to_group(int sock, const char *group_name, const char *invited_name)
+void handle_invite_to_group(int sock, const char *group_name, const char *invited_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -843,9 +844,8 @@ void handle_invite_to_group(int sock, const char *group_name, const char *invite
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_leave_group(int sock, const char *group_name)
+void handle_leave_group(int sock, const char *group_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -858,9 +858,8 @@ void handle_leave_group(int sock, const char *group_name)
     json_object_put(jobj); // Free the JSON object
 }
 
-void handle_list_group_members(int sock, const char *group_name)
+void handle_list_group_members(int sock, const char *group_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -913,9 +912,8 @@ void print_table_member(struct json_object *list_of_members_array, const char *g
     }
 }
 
-void handle_list_invitations(int sock)
+void handle_list_invitations(int sock, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jobj, "messageType", json_object_new_string("LIST_INVITATION"));
@@ -967,9 +965,8 @@ void print_invitation_list(struct json_object *list_of_invitations)
     }
 }
 
-void handle_remove_member(int sock, const char *group_name, const char *member_name)
+void handle_remove_member(int sock, const char *group_name, const char *member_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -1017,9 +1014,8 @@ void handle_remove_member(int sock, const char *group_name, const char *member_n
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_approval(int sock, const char *group_name, const char *requester, const char *decision)
+void handle_approval(int sock, const char *group_name, const char *requester, const char *decision, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -1082,9 +1078,8 @@ void handle_approval(int sock, const char *group_name, const char *requester, co
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_join_request_status(int sock)
+void handle_join_request_status(int sock, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jobj, "messageType", json_object_new_string("JOIN_REQUEST_STATUS"));
@@ -1142,9 +1137,8 @@ void print_join_request_status(struct json_object *join_request_status_array)
     }
 }
 
-void handle_join_request_list(int sock, const char *group_name)
+void handle_join_request_list(int sock, const char *group_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -1203,9 +1197,8 @@ void print_join_request_list(struct json_object *join_request_list_array, const 
     }
 }
 
-void handle_folder_content(int sock, const char *group_name, const char *folder_name)
+void handle_folder_content(int sock, const char *group_name, const char *folder_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -1262,9 +1255,8 @@ void print_table_files(struct json_object *folder_content_array, const char *fol
     }
 }
 
-void handle_create_folder(int sock, const char *group_name, const char *folder_name)
+void handle_create_folder(int sock, const char *group_name, const char *folder_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -1311,9 +1303,8 @@ void handle_create_folder(int sock, const char *group_name, const char *folder_n
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_folder_rename(int sock, const char *group_name, const char *folder_name, const char *new_name)
+void handle_folder_rename(int sock, const char *group_name, const char *folder_name, const char *new_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -1361,9 +1352,8 @@ void handle_folder_rename(int sock, const char *group_name, const char *folder_n
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_folder_copy(int sock, const char *from_group, const char *to_group, const char *folder_name)
+void handle_folder_copy(int sock, const char *from_group, const char *to_group, const char *folder_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "fromGroup", json_object_new_string(from_group));
@@ -1411,9 +1401,8 @@ void handle_folder_copy(int sock, const char *from_group, const char *to_group, 
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_folder_move(int sock, const char *from_group, const char *to_group, const char *folder_name)
+void handle_folder_move(int sock, const char *from_group, const char *to_group, const char *folder_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "fromGroup", json_object_new_string(from_group));
@@ -1461,9 +1450,8 @@ void handle_folder_move(int sock, const char *from_group, const char *to_group, 
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_folder_delete(int sock, const char *group_name, const char *folder_name)
+void handle_folder_delete(int sock, const char *group_name, const char *folder_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -1510,9 +1498,8 @@ void handle_folder_delete(int sock, const char *group_name, const char *folder_n
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_upload_file(int sock, const char *group_name, const char *folder_name, const char *file_path)
+void handle_upload_file(int sock, const char *group_name, const char *folder_name, const char *file_path, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     FILE *file = fopen(file_path, "rb");
@@ -1582,9 +1569,8 @@ void handle_upload_file(int sock, const char *group_name, const char *folder_nam
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_download_file(int sock, const char *group_name, const char *folder_name, const char *file_name)
+void handle_download_file(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -1669,9 +1655,8 @@ void handle_download_file(int sock, const char *group_name, const char *folder_n
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_file_rename(int sock, const char *group_name, const char *folder_name, const char *file_name, const char *new_name)
+void handle_file_rename(int sock, const char *group_name, const char *folder_name, const char *file_name, const char *new_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
@@ -1720,9 +1705,8 @@ void handle_file_rename(int sock, const char *group_name, const char *folder_nam
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_file_copy(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name)
+void handle_file_copy(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "fromGroup", json_object_new_string(from_group));
@@ -1772,9 +1756,8 @@ void handle_file_copy(int sock, const char *from_group, const char *to_group, co
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_file_move(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name)
+void handle_file_move(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "fromGroup", json_object_new_string(from_group));
@@ -1824,9 +1807,8 @@ void handle_file_move(int sock, const char *from_group, const char *to_group, co
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_file_delete(int sock, const char *group_name, const char *folder_name, const char *file_name)
+void handle_file_delete(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *jobj)
 {
-    struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));

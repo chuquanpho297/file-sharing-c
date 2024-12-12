@@ -17,9 +17,10 @@
 // Database credentials
 const char *host = "127.0.0.1";
 const char *user = "root";
-const char *password = "123456";
+const char *password = "1";
 const char *db_name = "file_sharing";
 const unsigned int port = 3306;
+
 typedef struct
 {
     char username[MAX_USERNAME];
@@ -34,8 +35,7 @@ typedef struct
 } client_t;
 
 MYSQL *conn;
-// Simple user database (in memory)
-user_t users[100];
+
 int user_count = 0;
 pthread_mutex_t users_mutex = PTHREAD_MUTEX_INITIALIZER;
 
