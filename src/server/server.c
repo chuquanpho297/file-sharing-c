@@ -7,20 +7,15 @@
 #include <pthread.h>
 #include <json-c/json.h>
 #include "db_utils.h"
-#include "server/file_handler.h"
-
-#define PORT 5555
-#define BUFFER_SIZE 4096
-#define MAX_CLIENTS 10
-#define MAX_USERNAME 32
-#define MAX_PASSWORD 32
+#include "../utils/config.h"
+#include "../utils/structs.h"
 
 // Database credentials
-const char *host = "127.0.0.1";
-const char *user = "root";
-const char *password = "123456";
-const char *db_name = "file_sharing";
-const unsigned int port = 3306;
+const char *host = DB_HOST;
+const char *user = DB_USER;
+const char *password = DB_PASS;
+const char *db_name = DB_NAME;
+const unsigned int port = DB_PORT;
 
 typedef struct
 {
@@ -28,10 +23,8 @@ typedef struct
     char password[MAX_PASSWORD];
 } user_t;
 
-
 MYSQL *conn;
 
-int user_count = 0;
 pthread_mutex_t users_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Function prototypes
@@ -143,22 +136,28 @@ void *handle_client(void *arg)
         json_object_object_get_ex(parsed_json, "messageType", &message_type);
         const char *type = json_object_get_string(message_type);
 
-        if (strcmp(type, "UPLOAD_FILE") == 0) {
+        if (strcmp(type, "UPLOAD_FILE") == 0)
+        {
             handle_upload_file(client, buffer);
         }
-        else if (strcmp(type, "DOWNLOAD_FILE") == 0) {
+        else if (strcmp(type, "DOWNLOAD_FILE") == 0)
+        {
             handle_download_file(client, buffer);
         }
-        else if (strcmp(type, "FILE_RENAME") == 0) {
+        else if (strcmp(type, "FILE_RENAME") == 0)
+        {
             handle_file_rename(client, buffer);
         }
-        else if (strcmp(type, "FILE_COPY") == 0) {
+        else if (strcmp(type, "FILE_COPY") == 0)
+        {
             handle_file_copy(client, buffer);
         }
-        else if (strcmp(type, "FILE_MOVE") == 0) {
+        else if (strcmp(type, "FILE_MOVE") == 0)
+        {
             handle_file_move(client, buffer);
         }
-        else if (strcmp(type, "FILE_DELETE") == 0) {
+        else if (strcmp(type, "FILE_DELETE") == 0)
+        {
             handle_file_delete(client, buffer);
         }
         else if (strcmp(type, "LOGIN") == 0)
