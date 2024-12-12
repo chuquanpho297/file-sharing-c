@@ -15,5 +15,5 @@ include_directories(${JSONC_INCLUDE_DIRS})
 link_libraries(${JSONC_LIBRARIES} mysqlclient)
 
 # Create executables
-add_executable(server src/server.c src/db_utils.c)
+add_executable(server src/server.c src/db_utils.c src/models/join_model.c src/models/group_model.c src/models/user_model.c src/models/folder_model.c src/controllers/file_controller.c src/db/db_access.c src/server/file_handler.c)
 add_executable(client src/client.c)

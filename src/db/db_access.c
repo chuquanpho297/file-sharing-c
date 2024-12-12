@@ -1,9 +1,12 @@
+#define _XOPEN_SOURCE 500
+
 #include "db_access.h"
 #include "../utils/config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <models/join_model.h>
+#include <time.h>
+#include "../models/join_model.h"
 
 static MYSQL* connection = NULL;
 
@@ -245,6 +248,29 @@ JoinRequestList* db_list_join_requests(const char* group_name) {
 
     mysql_free_result(result);
     return list;
+}
+
+bool db_rename_file(const char* file_name, const char* new_name, const char* group_name, const char* folder_name) {
+    MYSQL* conn = db_connect();
+    if (!conn) return false;
+
+    char query[512];
+    snprintf(query, sizeof(query), 
+        "SELECT RenameFile('%s', '%s', '%s', '%s') AS Success;",
+        file_name, group_name, folder_name, new_name);
+
+    if (mysql_query(conn, query)) {
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES* result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
 }
 
 // Similar implementations for other database functions... 

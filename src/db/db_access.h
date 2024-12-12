@@ -6,6 +6,7 @@
 #include "../models/folder_model.h"
 #include "../models/group_model.h"
 #include "../models/user_model.h"
+#include "../models/join_model.h"
 
 // Database connection
 MYSQL* db_connect(void);

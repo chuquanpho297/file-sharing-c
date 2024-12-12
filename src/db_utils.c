@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 // Initialize the database connection
-MYSQL *db_connect(const char *host, const char *user, const char *password, const char *db_name, unsigned int port)
+MYSQL *db_connecting(const char *host, const char *user, const char *password, const char *db_name, unsigned int port)
 {
     MYSQL *conn = mysql_init(NULL);
 
@@ -24,7 +24,7 @@ MYSQL *db_connect(const char *host, const char *user, const char *password, cons
 }
 
 // Close the database connection
-void db_disconnect(MYSQL *conn)
+void db_disconnecting(MYSQL *conn)
 {
     if (conn)
     {

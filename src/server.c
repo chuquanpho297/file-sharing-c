@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <json-c/json.h>
 #include "db_utils.h"
+#include "server/file_handler.h"
 
 #define PORT 5555
 #define BUFFER_SIZE 4096
@@ -17,7 +18,7 @@
 // Database credentials
 const char *host = "127.0.0.1";
 const char *user = "root";
-const char *password = "1";
+const char *password = "123456";
 const char *db_name = "file_sharing";
 const unsigned int port = 3306;
 
@@ -27,12 +28,6 @@ typedef struct
     char password[MAX_PASSWORD];
 } user_t;
 
-typedef struct
-{
-    int socket;
-    char username[MAX_USERNAME];
-    int is_logged_in;
-} client_t;
 
 MYSQL *conn;
 
@@ -47,7 +42,7 @@ void send_response(int socket, int code, const char *message);
 
 int main()
 {
-    conn = db_connect(host, user, password, db_name, port);
+    conn = db_connecting(host, user, password, db_name, port);
     if (conn == NULL)
     {
         fprintf(stderr, "db_connect failed: %s\n", mysql_error(conn));
@@ -142,14 +137,31 @@ void *handle_client(void *arg)
     {
         buffer[read_size] = '\0';
 
-        // Parse JSON message
         struct json_object *parsed_json = json_tokener_parse(buffer);
         struct json_object *message_type;
 
         json_object_object_get_ex(parsed_json, "messageType", &message_type);
         const char *type = json_object_get_string(message_type);
 
-        if (strcmp(type, "LOGIN") == 0)
+        if (strcmp(type, "UPLOAD_FILE") == 0) {
+            handle_upload_file(client, buffer);
+        }
+        else if (strcmp(type, "DOWNLOAD_FILE") == 0) {
+            handle_download_file(client, buffer);
+        }
+        else if (strcmp(type, "FILE_RENAME") == 0) {
+            handle_file_rename(client, buffer);
+        }
+        else if (strcmp(type, "FILE_COPY") == 0) {
+            handle_file_copy(client, buffer);
+        }
+        else if (strcmp(type, "FILE_MOVE") == 0) {
+            handle_file_move(client, buffer);
+        }
+        else if (strcmp(type, "FILE_DELETE") == 0) {
+            handle_file_delete(client, buffer);
+        }
+        else if (strcmp(type, "LOGIN") == 0)
         {
             handle_login(client, buffer);
         }
