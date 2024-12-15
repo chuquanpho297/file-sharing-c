@@ -26,11 +26,20 @@ void handle_create_group(client_t* client, const char* buffer) {
     
     const char* group_name = json_object_get_string(group_name_obj);
     
+    // First ensure root directory exists
+    struct stat st = {0};
+    if (stat("root", &st) == -1) {
+        if (mkdir("root", 0777) != 0) {
+            send_response(client->socket, 501, "Failed to create root directory");
+            json_object_put(parsed_json);
+            return;
+        }
+    }
+    
     // Create group directory
     char path[1024];
     snprintf(path, sizeof(path), "root/%s", group_name);
     
-    struct stat st = {0};
     if (stat(path, &st) == -1) {
         // Directory doesn't exist, try to create it
         if (mkdir(path, 0777) == 0) {
@@ -41,6 +50,8 @@ void handle_create_group(client_t* client, const char* buffer) {
                 send_response(client->socket, 501, "Failed to create group in database");
             }
         } else {
+            // Print error for debugging
+            perror("Failed to create group directory");
             send_response(client->socket, 501, "Failed to create group directory");
         }
     } else {

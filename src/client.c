@@ -46,7 +46,7 @@ void handle_file_rename(int sock, const char *group_name, const char *folder_nam
 void handle_file_copy(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *j);
 void handle_file_move(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *j);
 void handle_file_delete(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *j);
-
+void handle_exit(int sock, struct json_object *j);
 int main()
 {
     int sock = 0;
@@ -585,6 +585,14 @@ int main()
 
             handle_file_delete(sock, group_name, folder_name, file_name, jobj);
         }
+
+        else if (strcmp(command, "EXIT") == 0)
+        {
+            printf("Exiting the program...\n");
+            handle_exit(sock, jobj);
+
+            break;
+        }
         else
         {
             printf("Command not recognized!\n");
@@ -595,6 +603,15 @@ int main()
 
     close(sock);
     return 0;
+}
+
+void handle_exit(int sock, struct json_object *jobj)
+{
+    json_object_object_add(jobj, "messageType", json_object_new_string("EXIT"));
+    json_object_object_add(jobj, "payload", json_object_new_object());
+
+    const char *request = json_object_to_json_string(jobj);
+    send(sock, request, strlen(request), 0);
 }
 
 void handle_login(int sock, const char *username, const char *password, int *is_logged_in, char *current_user, struct json_object *jobj)
@@ -1885,5 +1902,6 @@ void print_usage(void)
     printf("FILE_COPY - Copy a file to another group\n");
     printf("FILE_MOVE - Move a file to another group\n");
     printf("FILE_DELETE - Delete a file\n");
+    printf("EXIT - Exit the program\n");
     printf("HELP - Show usage\n");
 }
