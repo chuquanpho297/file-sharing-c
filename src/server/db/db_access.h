@@ -30,6 +30,8 @@ bool db_check_is_admin(const char* user_name, const char* group_name);
 bool db_check_is_member(const char* user_name, const char* group_name);
 bool db_remove_member(const char* member_name, const char* group_name);
 bool db_invite_to_group(const char* invited_name, const char* group_name);
+bool db_join_group(const char* user_name, const char* group_name);
+bool db_leave_group(const char* user_name, const char* group_name);
 GroupMemberList* db_list_members(const char* group_name);
 GroupList* db_list_all_groups(void);
 
@@ -39,9 +41,12 @@ bool db_login(const char* user_name, const char* password);
 
 // Join operations
 bool db_request_join(const char* user_name, const char* group_name);
+bool db_invite_join(const char* user_name, const char* group_name);
 bool db_accept_join(const char* user_name, const char* group_name);
 bool db_deny_join(const char* user_name, const char* group_name);
 JoinRequestList* db_list_join_requests(const char* group_name);
-JoinRequestStatus* db_get_join_status(const char* user_name, const char* group_name);
+JoinRequestStatus* db_get_join_status(const char* user_name);
+JoinRequestStatus* db_get_invitation_status(const char* user_name);
+
 
 #endif // DB_ACCESS_H 

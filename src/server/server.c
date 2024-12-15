@@ -6,9 +6,12 @@
 #include <sys/socket.h>
 #include <pthread.h>
 #include <json-c/json.h>
-#include "db_utils.h"
+#include <mysql/mysql.h>
 #include "../utils/config.h"
 #include "../utils/structs.h"
+#include "db/db_access.h"
+#include "file_handler.h"
+#include "group_handler.h"
 
 // Database credentials
 const char *host = DB_HOST;
@@ -23,8 +26,6 @@ typedef struct
     char password[MAX_PASSWORD];
 } user_t;
 
-MYSQL *conn;
-
 pthread_mutex_t users_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Function prototypes
@@ -32,16 +33,27 @@ void *handle_client(void *arg);
 void handle_login(client_t *client, const char *buffer);
 void handle_register(client_t *client, const char *buffer);
 void send_response(int socket, int code, const char *message);
+void handle_create_group(client_t* client, const char* buffer);
+void handle_list_all_groups(client_t* client, const char* buffer);
+void handle_join_group(client_t* client, const char* buffer);
+void handle_invite_to_group(client_t* client, const char* buffer);
+void handle_leave_group(client_t* client, const char* buffer);
+void handle_list_group_members(client_t* client, const char* buffer);
+void handle_list_invitations(client_t* client, const char* buffer);
+void handle_remove_member(client_t* client, const char* buffer);
+void handle_approval(client_t* client, const char* buffer);
+void handle_join_request_status(client_t* client, const char* buffer);
+void handle_join_request_list(client_t* client, const char* buffer);
+void handle_folder_content(client_t* client, const char* buffer);
+void handle_create_folder(client_t* client, const char* buffer);
+void handle_folder_rename(client_t* client, const char* buffer);
+void handle_folder_copy(client_t* client, const char* buffer);
+void handle_folder_move(client_t* client, const char* buffer);
+void handle_folder_delete(client_t* client, const char* buffer);
 
 int main()
 {
-    conn = db_connecting(host, user, password, db_name, port);
-    if (conn == NULL)
-    {
-        fprintf(stderr, "db_connect failed: %s\n", mysql_error(conn));
-        exit(EXIT_FAILURE);
-    }
-    printf("Database connection successful.\n");
+
     int server_fd;
     struct sockaddr_in address;
     int opt = 1;
@@ -97,7 +109,7 @@ int main()
         }
 
         // Send connection success response
-        // send_response(client->socket, 200, "Connected to server");
+        send_response(client->socket, 200, "Connected to server");
 
         // Create new thread for client
         if (pthread_create(&tid[client_count++], NULL, handle_client, (void *)client) != 0)
@@ -126,6 +138,9 @@ void *handle_client(void *arg)
     char buffer[BUFFER_SIZE];
     int read_size;
 
+    // Send initial connection response
+    // send_response(client->socket, 200, "Connected to server");
+
     while ((read_size = recv(client->socket, buffer, BUFFER_SIZE, 0)) > 0)
     {
         buffer[read_size] = '\0';
@@ -136,7 +151,86 @@ void *handle_client(void *arg)
         json_object_object_get_ex(parsed_json, "messageType", &message_type);
         const char *type = json_object_get_string(message_type);
 
-        if (strcmp(type, "UPLOAD_FILE") == 0)
+        printf("Request from client: %s\n", buffer);
+
+        if (strcmp(type, "EXIT") == 0)
+        {
+            printf("Client disconnected\n");
+            break;
+        }
+
+        // Group operations
+        if (strcmp(type, "CREATE_GROUP") == 0)
+        {
+            handle_create_group(client, buffer);
+        }
+        else if (strcmp(type, "LIST_ALL_GROUPS") == 0)
+        {
+            handle_list_all_groups(client, buffer);
+        }
+        else if (strcmp(type, "JOIN_GROUP") == 0)
+        {
+            handle_join_group(client, buffer);
+        }
+        else if (strcmp(type, "INVITE_TO_GROUP") == 0)
+        {
+            handle_invite_to_group(client, buffer);
+        }
+        else if (strcmp(type, "LEAVE_GROUP") == 0)
+        {
+            handle_leave_group(client, buffer);
+        }
+        else if (strcmp(type, "LIST_GROUP_MEMBERS") == 0)
+        {
+            handle_list_group_members(client, buffer);
+        }
+        else if (strcmp(type, "LIST_INVITATION") == 0)
+        {
+            handle_list_invitations(client, buffer);
+        }
+        else if (strcmp(type, "REMOVE_MEMBER") == 0)
+        {
+            handle_remove_member(client, buffer);
+        }
+        else if (strcmp(type, "APPROVAL") == 0)
+        {
+            handle_approval(client, buffer);
+        }
+        else if (strcmp(type, "JOIN_REQUEST_STATUS") == 0)
+        {
+            handle_join_request_status(client, buffer);
+        }
+        else if (strcmp(type, "JOIN_REQUEST_LIST") == 0)
+        {
+            handle_join_request_list(client, buffer);
+        }
+        // Folder operations
+        else if (strcmp(type, "FOLDER_CONTENT") == 0)
+        {
+            handle_folder_content(client, buffer);
+        }
+        else if (strcmp(type, "CREATE_FOLDER") == 0)
+        {
+            handle_create_folder(client, buffer);
+        }
+        else if (strcmp(type, "FOLDER_RENAME") == 0)
+        {
+            handle_folder_rename(client, buffer);
+        }
+        else if (strcmp(type, "FOLDER_COPY") == 0)
+        {
+            handle_folder_copy(client, buffer);
+        }
+        else if (strcmp(type, "FOLDER_MOVE") == 0)
+        {
+            handle_folder_move(client, buffer);
+        }
+        else if (strcmp(type, "FOLDER_DELETE") == 0)
+        {
+            handle_folder_delete(client, buffer);
+        }
+        // File operations
+        else if (strcmp(type, "UPLOAD_FILE") == 0)
         {
             handle_upload_file(client, buffer);
         }
@@ -160,6 +254,7 @@ void *handle_client(void *arg)
         {
             handle_file_delete(client, buffer);
         }
+        // User operations
         else if (strcmp(type, "LOGIN") == 0)
         {
             handle_login(client, buffer);
@@ -168,11 +263,7 @@ void *handle_client(void *arg)
         {
             handle_register(client, buffer);
         }
-        else if (strcmp(type, "EXIT") == 0)
-        {
-            break;
-        }
-
+        
         json_object_put(parsed_json);
     }
 
@@ -193,25 +284,6 @@ void handle_login(client_t *client, const char *buffer)
     const char *username = json_object_get_string(username_obj);
     const char *password = json_object_get_string(password_obj);
 
-    const char *query = "SELECT Login(?, ?) AS Success;";
-    MYSQL_STMT *stmt = mysql_stmt_init(conn);
-    if (!stmt)
-    {
-        fprintf(stderr, "mysql_stmt_init failed: %s\n", mysql_error(conn));
-        send_response(client->socket, 500, "Internal server error");
-        mysql_close(conn);
-        return;
-    }
-
-    if (mysql_stmt_prepare(stmt, query, strlen(query)))
-    {
-        fprintf(stderr, "mysql_stmt_prepare failed: %s\n", mysql_stmt_error(stmt));
-        send_response(client->socket, 500, "Internal server error");
-        mysql_stmt_close(stmt);
-        mysql_close(conn);
-        return;
-    }
-
     pthread_mutex_lock(&users_mutex);
     MYSQL_BIND bind[2];
     memset(bind, 0, sizeof(bind));
@@ -224,62 +296,20 @@ void handle_login(client_t *client, const char *buffer)
     bind[1].buffer = (char *)password;
     bind[1].buffer_length = strlen(password);
 
-    if (mysql_stmt_bind_param(stmt, bind))
-    {
-        fprintf(stderr, "mysql_stmt_bind_param failed: %s\n", mysql_stmt_error(stmt));
-        send_response(client->socket, 500, "Internal server error");
-        mysql_stmt_close(stmt);
-        mysql_close(conn);
-        return;
-    }
-
-    if (mysql_stmt_execute(stmt))
-    {
-        fprintf(stderr, "mysql_stmt_execute failed: %s\n", mysql_stmt_error(stmt));
-        send_response(client->socket, 500, "Internal server error");
-        mysql_stmt_close(stmt);
-        mysql_close(conn);
-        return;
-    }
-
-    MYSQL_BIND result_bind[1];
-    memset(result_bind, 0, sizeof(result_bind));
-
-    int success;
-    result_bind[0].buffer_type = MYSQL_TYPE_LONG;
-    result_bind[0].buffer = (char *)&success;
-    result_bind[0].is_null = 0;
-    result_bind[0].length = 0;
-
-    if (mysql_stmt_bind_result(stmt, result_bind))
-    {
-        fprintf(stderr, "mysql_stmt_bind_result failed: %s\n", mysql_stmt_error(stmt));
-        send_response(client->socket, 500, "Internal server error");
-        mysql_stmt_close(stmt);
-        mysql_close(conn);
-        return;
-    }
-
     pthread_mutex_unlock(&users_mutex);
-
-    if (mysql_stmt_fetch(stmt) == 0)
+    bool success = db_login(username, password);
+    printf("Login success: %d\n", success);
+    if (success == 1)
     {
-        if (success == 1)
-        {
-            strncpy(client->username, username, MAX_USERNAME - 1);
-            client->is_logged_in = 1;
-            send_response(client->socket, 200, "Login successful");
-        }
-        else
-        {
-            send_response(client->socket, 401, "Invalid username or password");
-        }
+        strncpy(client->username, username, MAX_USERNAME - 1);
+        client->is_logged_in = 1;
+        send_response(client->socket, 200, "Login successful");
     }
     else
     {
-        send_response(client->socket, 500, "Internal server error");
+        send_response(client->socket, 401, "Invalid username or password");
     }
-    mysql_stmt_close(stmt);
+
     json_object_put(parsed_json);
 }
 
@@ -295,29 +325,9 @@ void handle_register(client_t *client, const char *buffer)
     const char *username = json_object_get_string(username_obj);
     const char *password = json_object_get_string(password_obj);
 
-    char query[256];
-    snprintf(query, 256, "Select InsertNewUser('%s', '%s') AS Success;", username, password);
-
-    if (mysql_query(conn, query))
-    {
-        fprintf(stderr, "CALL REGISTER failed: %s\n", mysql_error(conn));
-        send_response(client->socket, 500, "Internal server error");
-        mysql_close(conn);
-        return;
-    }
-
     pthread_mutex_lock(&users_mutex);
-    MYSQL_RES *result = mysql_store_result(conn);
-    if (result == NULL)
-    {
-        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn));
-        send_response(client->socket, 500, "Internal server error");
-        mysql_close(conn);
-        return;
-    }
 
-    MYSQL_ROW row = mysql_fetch_row(result);
-    if (row && strcmp(row[0], "1") == 0)
+    if (db_create_user(username, password))
     {
         strncpy(client->username, username, MAX_USERNAME - 1);
         client->is_logged_in = 1;
@@ -327,8 +337,6 @@ void handle_register(client_t *client, const char *buffer)
     {
         send_response(client->socket, 409, "User already exists");
     }
-
-    mysql_free_result(result);
     pthread_mutex_unlock(&users_mutex);
 
     json_object_put(parsed_json);

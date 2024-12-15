@@ -30,7 +30,7 @@ typedef struct {
 typedef struct {
     char* group_name;
     JoinStatus status;
-    time_t request_time;
+    char* request_time;
 } JoinRequestStatus;
 
 // Constructor and destructor functions

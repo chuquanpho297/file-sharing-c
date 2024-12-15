@@ -3,7 +3,7 @@
 
 #include <json-c/json.h>
 #include "controllers/file_controller.h"
-#include "structs.h"
+#include "../utils/structs.h"
 
 // File operation handlers
 void handle_upload_file(client_t *client, const char *buffer);
