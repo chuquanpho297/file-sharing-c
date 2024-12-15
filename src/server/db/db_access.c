@@ -1,12 +1,12 @@
 #define _XOPEN_SOURCE 500
 
 #include "db_access.h"
-#include "../utils/config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include "../models/join_model.h"
+#include "../../utils/config.h"
 
 static MYSQL* connection = NULL;
 
