@@ -1,9 +1,9 @@
+#include "file_handler.h"
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include "../utils/structs.h"
 
 void handle_upload_file(client_t *client, const char *buffer)
 {
@@ -21,18 +21,19 @@ void handle_upload_file(client_t *client, const char *buffer)
     const char *gname = json_object_get_string(group_name);
     const char *folder = json_object_get_string(folder_name);
 
+
     // Create file entry in database
     if (create_file(fname, fsize, gname, folder))
     {
-        // Create directory path if it doesn't exist
+
         char path[1024];
         snprintf(path, sizeof(path), "root/%s/%s", gname, folder);
         mkdir(path, 0777);
-        printf("Directory path: %s\n", path);
+
         // Create full file path
         char file_path[2048];
         snprintf(file_path, sizeof(file_path), "%s/%s", path, fname);
-        printf("File path: %s\n", file_path);
+
         // Check if file exists, if not create an empty file
         create_empty_file_if_not_exists(file_path);
 
@@ -83,10 +84,8 @@ void handle_download_file(client_t *client, const char *buffer)
     const char *fname = json_object_get_string(file_name);
     const char *gname = json_object_get_string(group_name);
     const char *folder = json_object_get_string(folder_name);
-
     char file_path[2048];
     snprintf(file_path, sizeof(file_path), "root/%s/%s/%s", gname, folder, fname);
-
     struct stat st;
     if (stat(file_path, &st) == 0)
     {

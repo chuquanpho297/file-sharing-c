@@ -12,5 +12,7 @@ void handle_file_rename(client_t *client, const char *buffer);
 void handle_file_copy(client_t *client, const char *buffer);
 void handle_file_move(client_t *client, const char *buffer);
 void handle_file_delete(client_t *client, const char *buffer);
-
+void create_empty_file_if_not_exists(const char *filename);
+int file_exists(const char *filename);
+void send_response(int socket, int code, const char *message);
 #endif

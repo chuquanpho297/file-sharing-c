@@ -207,31 +207,40 @@ void handle_list_group_members(client_t* client, const char* buffer) {
 
 void handle_list_invitations(client_t* client, const char* buffer) {
     JoinRequestStatus* status = db_get_invitation_status(client->username);
-    if (!status) {
-        send_response(client->socket, 201, "No invitations");
-        return;
-    }
-
+    
+    // Create response objects first
     struct json_object *response = json_object_new_object();
     struct json_object *payload = json_object_new_object();
     struct json_object *invitation_array = json_object_new_array();
 
-    struct json_object *invitation = json_object_new_object();
-    json_object_object_add(invitation, "groupName", json_object_new_string(status->group_name));
-    json_object_object_add(invitation, "status", json_object_new_string(status->status == JOIN_STATUS_PENDING ? "pending" : 
-                                                                       status->status == JOIN_STATUS_ACCEPTED ? "accepted" : "denied"));
-    json_object_object_add(invitation, "requestTime", json_object_new_string(status->request_time));
-    json_object_array_add(invitation_array, invitation);
+    if (!status) {
+        // No invitations case
+        json_object_object_add(response, "responseCode", json_object_new_int(201));
+        json_object_object_add(response, "message", json_object_new_string("No invitations"));
+    } else {
+        // Has invitations case
+        struct json_object *invitation = json_object_new_object();
+        json_object_object_add(invitation, "groupName", json_object_new_string(status->group_name));
+        json_object_object_add(invitation, "status", json_object_new_string(
+            status->status == JOIN_STATUS_PENDING ? "pending" : 
+            status->status == JOIN_STATUS_ACCEPTED ? "accepted" : "denied"));
+        json_object_object_add(invitation, "requestTime", json_object_new_string(status->request_time));
+        json_object_array_add(invitation_array, invitation);
 
-    json_object_object_add(response, "responseCode", json_object_new_int(200));
-    json_object_object_add(payload, "listOfInvitation", invitation_array);
-    json_object_object_add(response, "payload", payload);
+        json_object_object_add(response, "responseCode", json_object_new_int(200));
+        json_object_object_add(payload, "listOfInvitation", invitation_array);
+        json_object_object_add(response, "payload", payload);
+    }
 
+    // Send response
     const char* response_str = json_object_to_json_string(response);
     send(client->socket, response_str, strlen(response_str), 0);
 
+    // Cleanup
     json_object_put(response);
-    free(status);
+    if (status) {
+        free(status);
+    }
 }
 
 void handle_remove_member(client_t* client, const char* buffer) {
@@ -298,31 +307,40 @@ void handle_approval(client_t* client, const char* buffer) {
 
 void handle_join_request_status(client_t* client, const char* buffer) {
     JoinRequestStatus* status = db_get_join_status(client->username);
-    if (!status) {
-        send_response(client->socket, 201, "No join requests");
-        return;
-    }
-
+    
+    // Create response objects first
     struct json_object *response = json_object_new_object();
     struct json_object *payload = json_object_new_object();
     struct json_object *status_array = json_object_new_array();
 
-    struct json_object *request = json_object_new_object();
-    json_object_object_add(request, "groupName", json_object_new_string(status->group_name));
-    json_object_object_add(request, "status", json_object_new_string(status->status == JOIN_STATUS_PENDING ? "pending" : 
-                                                                    status->status == JOIN_STATUS_ACCEPTED ? "accepted" : "denied"));
-    json_object_object_add(request, "requestTime", json_object_new_string(status->request_time));
-    json_object_array_add(status_array, request);
+    if (!status) {
+        // No requests case
+        json_object_object_add(response, "responseCode", json_object_new_int(201));
+        json_object_object_add(response, "message", json_object_new_string("No join requests"));
+    } else {
+        // Has requests case
+        struct json_object *request = json_object_new_object();
+        json_object_object_add(request, "groupName", json_object_new_string(status->group_name));
+        json_object_object_add(request, "status", json_object_new_string(
+            status->status == JOIN_STATUS_PENDING ? "pending" : 
+            status->status == JOIN_STATUS_ACCEPTED ? "accepted" : "denied"));
+        json_object_object_add(request, "requestTime", json_object_new_string(status->request_time));
+        json_object_array_add(status_array, request);
 
-    json_object_object_add(response, "responseCode", json_object_new_int(200));
-    json_object_object_add(payload, "listOfAppliedGroups", status_array);
-    json_object_object_add(response, "payload", payload);
+        json_object_object_add(response, "responseCode", json_object_new_int(200));
+        json_object_object_add(payload, "listOfAppliedGroups", status_array);
+        json_object_object_add(response, "payload", payload);
+    }
 
+    // Send response
     const char* response_str = json_object_to_json_string(response);
     send(client->socket, response_str, strlen(response_str), 0);
 
+    // Cleanup
     json_object_put(response);
-    free(status);
+    if (status) {
+        free(status);
+    }
 }
 
 void handle_join_request_list(client_t* client, const char* buffer) {
