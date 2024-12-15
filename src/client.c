@@ -47,6 +47,8 @@ void handle_file_copy(int sock, const char *from_group, const char *to_group, co
 void handle_file_move(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *j);
 void handle_file_delete(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *j);
 void handle_exit(int sock, struct json_object *j);
+const char* get_filename(const char* path);
+
 int main()
 {
     int sock = 0;
@@ -632,7 +634,6 @@ void handle_login(int sock, const char *username, const char *password, int *is_
 
     // Check response and update login status
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -672,7 +673,6 @@ void handle_register(int sock, const char *username, const char *password, int *
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -710,7 +710,6 @@ void handle_create_group(int sock, const char *group_name, struct json_object *j
     char buffer[BUFFER_SIZE];
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -751,7 +750,6 @@ void handle_list_all_groups(int sock, struct json_object *jobj)
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("%s\n", buffer);
 
     struct json_object *parsed_json;
     parsed_json = json_tokener_parse(buffer);
@@ -778,7 +776,6 @@ void handle_join_group(int sock, const char *group_name, struct json_object *job
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -830,7 +827,6 @@ void handle_invite_to_group(int sock, const char *group_name, const char *invite
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -892,7 +888,6 @@ void handle_list_group_members(int sock, const char *group_name, struct json_obj
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -945,7 +940,6 @@ void handle_list_invitations(int sock, struct json_object *jobj)
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1000,7 +994,6 @@ void handle_remove_member(int sock, const char *group_name, const char *member_n
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1065,7 +1058,6 @@ void handle_approval(int sock, const char *group_name, const char *requester, co
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1111,7 +1103,6 @@ void handle_join_request_status(int sock, struct json_object *jobj)
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1171,7 +1162,6 @@ void handle_join_request_list(int sock, const char *group_name, struct json_obje
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1232,7 +1222,6 @@ void handle_folder_content(int sock, const char *group_name, const char *folder_
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1290,7 +1279,6 @@ void handle_create_folder(int sock, const char *group_name, const char *folder_n
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1339,7 +1327,6 @@ void handle_folder_rename(int sock, const char *group_name, const char *folder_n
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1388,7 +1375,6 @@ void handle_folder_copy(int sock, const char *from_group, const char *to_group, 
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1437,7 +1423,6 @@ void handle_folder_move(int sock, const char *from_group, const char *to_group, 
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1485,7 +1470,6 @@ void handle_folder_delete(int sock, const char *group_name, const char *folder_n
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1532,7 +1516,7 @@ void handle_upload_file(int sock, const char *group_name, const char *folder_nam
 
     json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
     json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
-    json_object_object_add(jpayload, "fileName", json_object_new_string(file_path));
+    json_object_object_add(jpayload, "fileName", json_object_new_string(get_filename(file_path)));
     json_object_object_add(jpayload, "fileSize", json_object_new_int64(file_size));
     json_object_object_add(jobj, "messageType", json_object_new_string("UPLOAD_FILE"));
     json_object_object_add(jobj, "payload", jpayload);
@@ -1544,7 +1528,6 @@ void handle_upload_file(int sock, const char *group_name, const char *folder_nam
 
     char buffer[BUFFER_SIZE];
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1603,7 +1586,6 @@ void handle_download_file(int sock, const char *group_name, const char *folder_n
 
     char buffer[BUFFER_SIZE];
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1692,7 +1674,6 @@ void handle_file_rename(int sock, const char *group_name, const char *folder_nam
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1743,7 +1724,6 @@ void handle_file_copy(int sock, const char *from_group, const char *to_group, co
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1794,7 +1774,6 @@ void handle_file_move(int sock, const char *from_group, const char *to_group, co
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1843,7 +1822,6 @@ void handle_file_delete(int sock, const char *group_name, const char *folder_nam
 
     // Check response
     recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Response from server:\n%s\n", buffer);
 
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -1904,4 +1882,13 @@ void print_usage(void)
     printf("FILE_DELETE - Delete a file\n");
     printf("EXIT - Exit the program\n");
     printf("HELP - Show usage\n");
+}
+
+
+const char* get_filename(const char* path) {
+    const char *filename = strrchr(path, '/');
+    if (filename == NULL) {
+        return path; // No '/' found, return the original path
+    }
+    return filename + 1; // Skip the '/' character
 }

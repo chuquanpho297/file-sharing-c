@@ -28,10 +28,13 @@ void handle_upload_file(client_t *client, const char *buffer)
         char path[1024];
         snprintf(path, sizeof(path), "root/%s/%s", gname, folder);
         mkdir(path, 0777);
-
+        printf("Directory path: %s\n", path);
         // Create full file path
         char file_path[2048];
         snprintf(file_path, sizeof(file_path), "%s/%s", path, fname);
+        printf("File path: %s\n", file_path);
+        // Check if file exists, if not create an empty file
+        create_empty_file_if_not_exists(file_path);
 
         // Send success response to client
         send_response(client->socket, 200, "Ready to receive file");
@@ -289,4 +292,27 @@ void handle_file_delete(client_t *client, const char *buffer)
         send_response(client->socket, 404, "File not found or operation not permitted");
     }
     json_object_put(parsed_json);
+}
+
+// Check if file exists
+int file_exists(const char *filename)
+{
+    return access(filename, F_OK) != -1;
+}
+
+// Create an empty file if it does not exist
+void create_empty_file_if_not_exists(const char *filename)
+{
+    if (!file_exists(filename))
+    {
+        FILE *fp = fopen(filename, "wb");
+        if (fp != NULL)
+        {
+            fclose(fp);
+        }
+        else
+        {
+            perror("Failed to create file");
+        }
+    }
 }
