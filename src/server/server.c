@@ -33,23 +33,23 @@ void *handle_client(void *arg);
 void handle_login(client_t *client, const char *buffer);
 void handle_register(client_t *client, const char *buffer);
 void send_response(int socket, int code, const char *message);
-void handle_create_group(client_t* client, const char* buffer);
-void handle_list_all_groups(client_t* client, const char* buffer);
-void handle_join_group(client_t* client, const char* buffer);
-void handle_invite_to_group(client_t* client, const char* buffer);
-void handle_leave_group(client_t* client, const char* buffer);
-void handle_list_group_members(client_t* client, const char* buffer);
-void handle_list_invitations(client_t* client, const char* buffer);
-void handle_remove_member(client_t* client, const char* buffer);
-void handle_approval(client_t* client, const char* buffer);
-void handle_join_request_status(client_t* client, const char* buffer);
-void handle_join_request_list(client_t* client, const char* buffer);
-void handle_folder_content(client_t* client, const char* buffer);
-void handle_create_folder(client_t* client, const char* buffer);
-void handle_folder_rename(client_t* client, const char* buffer);
-void handle_folder_copy(client_t* client, const char* buffer);
-void handle_folder_move(client_t* client, const char* buffer);
-void handle_folder_delete(client_t* client, const char* buffer);
+void handle_create_group(client_t *client, const char *buffer);
+void handle_list_all_groups(client_t *client, const char *buffer);
+void handle_join_group(client_t *client, const char *buffer);
+void handle_invite_to_group(client_t *client, const char *buffer);
+void handle_leave_group(client_t *client, const char *buffer);
+void handle_list_group_members(client_t *client, const char *buffer);
+void handle_list_invitations(client_t *client, const char *buffer);
+void handle_remove_member(client_t *client, const char *buffer);
+void handle_approval(client_t *client, const char *buffer);
+void handle_join_request_status(client_t *client, const char *buffer);
+void handle_join_request_list(client_t *client, const char *buffer);
+void handle_folder_content(client_t *client, const char *buffer);
+void handle_create_folder(client_t *client, const char *buffer);
+void handle_folder_rename(client_t *client, const char *buffer);
+void handle_folder_copy(client_t *client, const char *buffer);
+void handle_folder_move(client_t *client, const char *buffer);
+void handle_folder_delete(client_t *client, const char *buffer);
 
 int main()
 {
@@ -109,7 +109,7 @@ int main()
         }
 
         // Send connection success response
-        send_response(client->socket, 200, "Connected to server");
+        // send_response(client->socket, 200, "Connected to server");
 
         // Create new thread for client
         if (pthread_create(&tid[client_count++], NULL, handle_client, (void *)client) != 0)
@@ -263,7 +263,7 @@ void *handle_client(void *arg)
         {
             handle_register(client, buffer);
         }
-        
+
         json_object_put(parsed_json);
     }
 
@@ -285,22 +285,11 @@ void handle_login(client_t *client, const char *buffer)
     const char *password = json_object_get_string(password_obj);
 
     pthread_mutex_lock(&users_mutex);
-    MYSQL_BIND bind[2];
-    memset(bind, 0, sizeof(bind));
 
-    bind[0].buffer_type = MYSQL_TYPE_STRING;
-    bind[0].buffer = (char *)username;
-    bind[0].buffer_length = strlen(username);
-
-    bind[1].buffer_type = MYSQL_TYPE_STRING;
-    bind[1].buffer = (char *)password;
-    bind[1].buffer_length = strlen(password);
-
-    pthread_mutex_unlock(&users_mutex);
     bool success = db_login(username, password);
-    printf("Login success: %d\n", success);
-    if (success == 1)
+    if (success)
     {
+
         strncpy(client->username, username, MAX_USERNAME - 1);
         client->is_logged_in = 1;
         send_response(client->socket, 200, "Login successful");
@@ -310,6 +299,7 @@ void handle_login(client_t *client, const char *buffer)
         send_response(client->socket, 401, "Invalid username or password");
     }
 
+    pthread_mutex_unlock(&users_mutex);
     json_object_put(parsed_json);
 }
 
