@@ -275,7 +275,7 @@ JoinRequestList *db_list_join_requests(const char *group_name)
 
     char query[1024];
     snprintf(query, sizeof(query),
-             "SELECT userName, createAt FROM `JoinGroup` WHERE status = 'pending' AND groupName = '%s;",
+             "SELECT userName, createAt FROM `JoinGroup` WHERE status = 'pending' AND groupName = '%s';",
              group_name);
 
     if (mysql_query(conn, query) != 0)
@@ -379,7 +379,7 @@ bool db_check_is_admin(const char *user_name, const char *group_name)
     char query[512];
     snprintf(query, sizeof(query),
              "SELECT CheckIsAdmin('%s', '%s') AS Success",
-             group_name, user_name);
+             user_name, group_name);
 
     if (mysql_query(conn, query))
     {
