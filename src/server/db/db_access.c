@@ -64,7 +64,19 @@ bool db_create_file(const char *file_name, long file_size, const char *group_nam
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Create file failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
 
     mysql_free_result(result);
@@ -91,7 +103,19 @@ bool db_delete_file(const char *file_name, const char *group_name, const char *f
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Delete file failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
 
     mysql_free_result(result);
@@ -121,7 +145,19 @@ bool db_create_folder(const char *folder_name, const char *group_name)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Create folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
 
     mysql_free_result(result);
@@ -148,7 +184,19 @@ bool db_delete_folder(const char *folder_name, const char *group_name)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Delete folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
 
     mysql_free_result(result);
@@ -414,7 +462,19 @@ bool db_check_is_member(const char *user_name, const char *group_name)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Check is member failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
     db_disconnect(conn);
     return success;
@@ -439,8 +499,21 @@ bool db_remove_member(const char *member_name, const char *group_name)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Remove member failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
+    mysql_free_result(result);
     db_disconnect(conn);
     return success;
 }
@@ -464,8 +537,21 @@ bool db_invite_to_group(const char *invited_name, const char *group_name)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Invite to group failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
+    mysql_free_result(result);
     db_disconnect(conn);
     return success;
 }
@@ -488,7 +574,19 @@ GroupMemberList *db_list_members(const char *group_name)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("List members failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
     GroupMemberList *list = malloc(sizeof(GroupMemberList));
+    if (!list)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return NULL;
+    }
     list->member_count = mysql_num_rows(result);
     list->members = malloc(list->member_count * sizeof(GroupMember));
 
@@ -525,8 +623,21 @@ bool db_create_user(const char *user_name, const char *password)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Create user failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
+    mysql_free_result(result);
     db_disconnect(conn);
     return success;
 }
@@ -552,8 +663,21 @@ bool db_login(const char *user_name, const char *password)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Login failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
+    mysql_free_result(result);
     db_disconnect(conn);
     return success;
 }
@@ -577,6 +701,12 @@ GroupList *db_list_all_groups(void)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("List all groups failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
     GroupList *list = group_list_create();
     list->group_count = mysql_num_rows(result);
     list->groups = malloc(list->group_count * sizeof(Group));
@@ -615,8 +745,21 @@ bool db_deny_join(const char *user_name, const char *group_name)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Deny join failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
+    mysql_free_result(result);
     db_disconnect(conn);
     return success;
 }
@@ -648,14 +791,24 @@ JoinRequestStatus *db_get_join_status(const char *user_name)
     }
 
     MYSQL_ROW row = mysql_fetch_row(result);
-    JoinRequestStatus *status = malloc(sizeof(JoinRequestStatus));
-    if (row)
+    if (!row)
     {
-        status->group_name = strdup(row[0]);
-        status->status = strcmp(row[1], "pending") == 0 ? JOIN_STATUS_PENDING : strcmp(row[1], "accepted") == 0 ? JOIN_STATUS_ACCEPTED
-                                                                                                                : JOIN_STATUS_DENIED;
-        status->request_time = strdup(row[2]);
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return NULL;
     }
+    JoinRequestStatus *status = malloc(sizeof(JoinRequestStatus));
+    if (!status)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    status->group_name = strdup(row[0]);
+    status->status = strcmp(row[1], "pending") == 0 ? JOIN_STATUS_PENDING : strcmp(row[1], "accepted") == 0 ? JOIN_STATUS_ACCEPTED
+                                                                                                            : JOIN_STATUS_DENIED;
+    status->request_time = strdup(row[2]);
 
     mysql_free_result(result);
     db_disconnect(conn);
@@ -681,7 +834,19 @@ bool db_rename_folder(const char *group_name, const char *folder_name, const cha
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Rename folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
 
     mysql_free_result(result);
@@ -708,7 +873,19 @@ bool db_copy_folder(const char *from_group, const char *folder_name, const char 
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Copy folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
 
     mysql_free_result(result);
@@ -735,7 +912,19 @@ bool db_join_group(const char *user_name, const char *group_name)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Join group failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
 
     mysql_free_result(result);
@@ -762,7 +951,19 @@ bool db_leave_group(const char *user_name, const char *group_name)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Leave group failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
 
     mysql_free_result(result);
@@ -789,7 +990,18 @@ bool db_invite_join(const char *user_name, const char *group_name)
     }
 
     MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        db_disconnect(conn);
+        return false;
+    }
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return false;
+    }
     bool success = (row && row[0] && row[0][0] == '1');
 
     mysql_free_result(result);
@@ -823,14 +1035,25 @@ JoinRequestStatus *db_get_invitation_status(const char *user_name)
     }
 
     MYSQL_ROW row = mysql_fetch_row(result);
-    JoinRequestStatus *status = malloc(sizeof(JoinRequestStatus));
-    if (row)
+    if (!row)
     {
-        status->group_name = strdup(row[0]);
-        status->status = strcmp(row[1], "pending") == 0 ? JOIN_STATUS_PENDING : strcmp(row[1], "accepted") == 0 ? JOIN_STATUS_ACCEPTED
-                                                                                                                : JOIN_STATUS_DENIED;
-        status->request_time = strdup(row[2]);
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return NULL;
     }
+
+    JoinRequestStatus *status = malloc(sizeof(JoinRequestStatus));
+    if (!status)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    status->group_name = strdup(row[0]);
+    status->status = strcmp(row[1], "pending") == 0 ? JOIN_STATUS_PENDING : strcmp(row[1], "accepted") == 0 ? JOIN_STATUS_ACCEPTED
+                                                                                                            : JOIN_STATUS_DENIED;
+    status->request_time = strdup(row[2]);
 
     mysql_free_result(result);
     db_disconnect(conn);

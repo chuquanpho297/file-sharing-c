@@ -25,7 +25,7 @@ void handle_invite_to_group(int sock, const char *group_name, const char *invite
 void handle_leave_group(int sock, const char *group_name, struct json_object *j);
 void handle_list_group_members(int sock, const char *group_name, struct json_object *j);
 void print_table_member(struct json_object *list_of_members_array, const char *group_name);
-void handle_list_invitations(int sock, struct json_object *j);
+void handle_list_invitations(int sock, struct json_object *jobj);
 void print_invitation_list(struct json_object *list_of_invitations);
 void handle_remove_member(int sock, const char *group_name, const char *member_name, struct json_object *j);
 void handle_approval(int sock, const char *group_name, const char *requester, const char *decision, struct json_object *j);
@@ -48,6 +48,7 @@ void handle_file_move(int sock, const char *from_group, const char *to_group, co
 void handle_file_delete(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *j);
 void handle_exit(int sock, struct json_object *j);
 const char* get_filename(const char* path);
+void print_group_list(struct json_object *parsed_json);
 
 int main()
 {
@@ -754,7 +755,7 @@ void handle_list_all_groups(int sock, struct json_object *jobj)
     struct json_object *parsed_json;
     parsed_json = json_tokener_parse(buffer);
 
-    printf("Group List:\n%s\n", json_object_to_json_string(parsed_json));
+    print_group_list(parsed_json);
 
     json_object_put(parsed_json); // Free the JSON object
 }
@@ -913,15 +914,19 @@ void handle_list_group_members(int sock, const char *group_name, struct json_obj
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void print_table_member(struct json_object *list_of_members_array, const char *group_name)
-{
-    printf("Members of group %s:\n", group_name);
+void print_table_member(struct json_object *list_of_members_array, const char *group_name) {
+    printf("\n┌──────────────────┐\n");
+    printf("│ %-16s │\n", "Members");
+    printf("├──────────────────┤\n");
+
     int array_len = json_object_array_length(list_of_members_array);
-    for (int i = 0; i < array_len; i++)
-    {
+    for (int i = 0; i < array_len; i++) {
         struct json_object *member = json_object_array_get_idx(list_of_members_array, i);
-        printf("%s\n", json_object_get_string(member));
+        printf("│ %-16s │\n", json_object_get_string(member));
     }
+    
+    printf("└──────────────────┘\n");
+    printf("Group: %s\n\n", group_name);
 }
 
 void handle_list_invitations(int sock, struct json_object *jobj)
@@ -936,44 +941,57 @@ void handle_list_invitations(int sock, struct json_object *jobj)
 
     json_object_put(jobj); // Free the JSON object
 
-    char buffer[BUFFER_SIZE];
-
-    // Check response
+    char buffer[BUFFER_SIZE] = {0};
     recv(sock, buffer, BUFFER_SIZE, 0);
 
-    struct json_object *parsed_json;
-    struct json_object *response_code;
-    struct json_object *payload;
-    struct json_object *list_of_invitations;
+    struct json_object *parsed_json = json_tokener_parse(buffer);
+    if (!parsed_json) {
+        printf("Failed to parse server response\n");
+        return;
+    }
 
-    parsed_json = json_tokener_parse(buffer);
-    json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+    struct json_object *response_code = NULL;
+    if (!json_object_object_get_ex(parsed_json, "responseCode", &response_code)) {
+        printf("Invalid server response format\n");
+        json_object_put(parsed_json);
+        return;
+    }
 
     int response_code_int = json_object_get_int(response_code);
-    switch (response_code_int)
-    {
-    case 200:
-        json_object_object_get_ex(parsed_json, "payload", &payload);
-        json_object_object_get_ex(payload, "listOfInvitation", &list_of_invitations);
-        print_invitation_list(list_of_invitations);
+    switch (response_code_int) {
+    case 200: {
+        struct json_object *payload = NULL;
+        struct json_object *list_of_invitations = NULL;
+        
+        if (json_object_object_get_ex(parsed_json, "payload", &payload) &&
+            json_object_object_get_ex(payload, "listOfInvitations", &list_of_invitations) &&
+            json_object_get_type(list_of_invitations) == json_type_array) {
+            print_invitation_list(list_of_invitations);
+        } else {
+            printf("No invitations found\n");
+        }
         break;
+    }
     default:
         printf("You do not have any invitation!\n");
         break;
     }
 
-    json_object_put(parsed_json); // Free the JSON object
+    json_object_put(parsed_json);
 }
 
-void print_invitation_list(struct json_object *list_of_invitations)
-{
-    printf("List of Invitations:\n");
+void print_invitation_list(struct json_object *list_of_invitations) {
+    printf("\n┌──────────────────┐\n");
+    printf("│ %-16s │\n", "Invitations");
+    printf("├──────────────────┤\n");
+
     int array_len = json_object_array_length(list_of_invitations);
-    for (int i = 0; i < array_len; i++)
-    {
+    for (int i = 0; i < array_len; i++) {
         struct json_object *invitation = json_object_array_get_idx(list_of_invitations, i);
-        printf("%s\n", json_object_get_string(invitation));
+        printf("│ %-16s │\n", json_object_get_string(invitation));
     }
+    
+    printf("└──────────────────┘\n\n");
 }
 
 void handle_remove_member(int sock, const char *group_name, const char *member_name, struct json_object *jobj)
@@ -1891,4 +1909,32 @@ const char* get_filename(const char* path) {
         return path; // No '/' found, return the original path
     }
     return filename + 1; // Skip the '/' character
+}
+
+void print_group_list(struct json_object *parsed_json) {
+    struct json_object *payload, *list_groups_array;
+    
+    // Navigate through the JSON structure
+    json_object_object_get_ex(parsed_json, "payload", &payload);
+    json_object_object_get_ex(payload, "listGroups", &list_groups_array);
+
+    printf("\n┌──────────────┬──────────────┬─────────────────────┐\n");
+    printf("│ Group Name   │ Created By   │ Created At          │\n");
+    printf("├──────────────┼──────────────┼─────────────────────┤\n");
+
+    int array_len = json_object_array_length(list_groups_array);
+    for (int i = 0; i < array_len; i++) {
+        struct json_object *group = json_object_array_get_idx(list_groups_array, i);
+        struct json_object *group_name, *created_by, *created_at;
+        
+        json_object_object_get_ex(group, "groupName", &group_name);
+        json_object_object_get_ex(group, "createdBy", &created_by);
+        json_object_object_get_ex(group, "createdAt", &created_at);
+
+        printf("│ %-12s │ %-12s │ %-19s │\n",
+            json_object_get_string(group_name),
+            json_object_get_string(created_by),
+            json_object_get_string(created_at));
+    }
+    printf("└──────────────┴──────────────┴─────────────────────┘\n\n");
 }
