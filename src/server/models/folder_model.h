@@ -10,7 +10,6 @@ typedef struct {
     FileInfo* files;
     int file_count;
     char* folder_name;
-    char* group_name;
 } FolderContents;
 
 // Constructor and destructor
