@@ -8,17 +8,6 @@ CREATE TABLE `Users` (
     PRIMARY KEY (`userName`)
 );
 
-ENUM('private', 'view', 'download',)
-
--- CREATE TABLE `FolderRoot` (
---     `folderID` VARCHAR(255) NOT NULL,
---     `folderName` VARCHAR(255) NOT NULL,
---     `createBy` VARCHAR(255) NOT NULL,
---     `createAt` TIMESTAMP NOT NULL,
---     PRIMARY KEY (`folderID`),
---     CONSTRAINT `createBy` FOREIGN KEY (`createBy`) REFERENCES `Users`(`userName`)
--- );
-
 CREATE TABLE `Folder` (
 	`folderID` VARCHAR(255) NOT NULL,
     `folderName` VARCHAR(255) NOT NULL,
@@ -41,34 +30,12 @@ CREATE TABLE `File` (
     CONSTRAINT `folderID` FOREIGN KEY (`folderID`) REFERENCES `Folder`(`folderID`)
 );
 
--- CREATE TABLE `MemberOfGroup` (
---     `folderID` VARCHAR(255) NOT NULL,
---     `userName` VARCHAR (255) NOT NULL,
---     `mRole` ENUM('admin', 'member') NOT NULL,
---     PRIMARY KEY (`folderID`, `userName`),
---     FOREIGN KEY (`userName`) REFERENCES `Users`(`userName`),
---     FOREIGN KEY (`folderID`) REFERENCES `Folder`(`folderID`)
--- );
-
--- CREATE TABLE `JoinGroup` (
---     `userName` VARCHAR(255) NOT NULL,
---     `requestType` ENUM('join','invite') NOT NULL,
---     `status` ENUM('pending','accepted','denied') NOT NULL,
---     `createAt` TIMESTAMP NOT NULL,
---     `folderID` VARCHAR(255) NOT NULL,
---     PRIMARY KEY (`folderID`, `userName`),
---     FOREIGN KEY (`userName`) REFERENCES `Users`(`userName`),
---     FOREIGN KEY (`folderID`) REFERENCES `Folder`(`folderID`)
--- );
-
-DELIMITER //
-
 CREATE FUNCTION HashPasswordWithUserName(userName VARCHAR(255), userPassword VARCHAR(255))
 RETURNS VARBINARY(64) DETERMINISTIC
 BEGIN
     RETURN UNHEX(SHA2(CONCAT(userPassword, HEX(SHA2(userName, 256))), 256));
 END;
-//
+
 CREATE FUNCTION InsertNewUser(pUserName VARCHAR(255), userPassword VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
@@ -90,7 +57,8 @@ BEGIN
         -- Return TRUE to indicate successful insertion
         RETURN TRUE;
     END IF;
-END //
+END
+
 CREATE FUNCTION Login(userName VARCHAR(255), userPassword VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
@@ -107,240 +75,7 @@ BEGIN
     ELSE
         RETURN FALSE; -- Invalid credentials, return FALSE
     END IF;
-END //
-
--- CREATE FUNCTION CreateNewGroup(username VARCHAR(255), groupNameInput VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE creatorName VARCHAR(255);
---     DECLARE groupExists VARCHAR(255);
-
---     -- Retrieve the user ID based on the username
---     SELECT userName INTO creatorName
---     FROM Users
---     WHERE userName = username
---     LIMIT 1;
-
---     -- If no user found, return FALSE
---     IF creatorName IS NULL THEN
---         RETURN FALSE;
---     END IF;
-
---     -- Check if the group name already exists
---     SELECT groupName INTO groupExists
---     FROM `Groups`
---     WHERE groupName = groupNameInput;
-
---     -- If the group name already exists, return NULL
---     IF groupExists IS NOT NULL THEN
---         RETURN FALSE;
---     END IF;
-
---     -- Create a new group
---     INSERT INTO `Groups` (groupName, createBy, createAt)
---     VALUES (groupNameInput, creatorName, NOW());
-
---     -- Add the creator to the MemberOfGroup table as an admin
---     INSERT INTO MemberOfGroup (groupName, userName, mRole)
---     VALUES (groupNameInput, username, 'admin');
-
---     RETURN TRUE;
--- END //
-
--- CREATE FUNCTION CheckIsMember(user_name VARCHAR(255), folder_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE isMember INT;
-
---     -- Check if the user is a member of the specified group
---     SELECT COUNT(*) INTO isMember
---     FROM MemberOfGroup
---     WHERE userName = user_name AND groupName = group_name;
-
---     IF isMember > 0 THEN
---         RETURN TRUE; -- User is a member of the group
---     ELSE
---         RETURN FALSE; -- User is not a member of the group
---     END IF;
--- END //
-
--- CREATE FUNCTION RequestToJoinGroup(user_name VARCHAR(255), group_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE isMem INT;
---     DECLARE isValidUser INT;
---     DECLARE isValidGroup INT;
---     DECLARE inJoinGroup INT;
-
---     -- Check if the username exists in the Users table
---     SELECT COUNT(*)
---     INTO isValidUser
---     FROM Users
---     WHERE userName = user_name;
-
---     -- Check if the group exists in the Groups table
---     SELECT COUNT(*)
---     INTO isValidGroup
---     FROM `Groups`
---     WHERE groupName = group_name;
-
--- 	SELECT COUNT(*)
---     INTO inJoinGroup
---     FROM JoinGroup
---     WHERE userName = user_name AND groupName = group_name and status = 'pending';
-    
---     IF isValidUser > 0 AND isValidGroup > 0 AND inJoinGroup = 0 THEN
---         -- User exists in Users table and group exists in Groups table
---         -- Check if the user is already a member of the group using CheckIsMember function
---         SET isMem = CheckIsMember(user_name, group_name);
-
---         IF isMem > 0 THEN
---             -- User is already a member, return FALSE indicating no need for a join request
---             RETURN FALSE;
---         ELSE
---             -- User is not a member, proceed to create a join request
---             INSERT INTO JoinGroup (userName, requestType, status, createAt, groupName)
---             VALUES (user_name, 'join', 'pending', NOW(), group_name);
-
---             RETURN TRUE; -- Return TRUE for successful request initiation
---         END IF;
---     ELSE
---         -- Invalid username or group name, return FALSE indicating invalid entry
---         RETURN FALSE;
---     END IF;
--- END //
-
--- CREATE FUNCTION InviteToGroup(invitedUsername VARCHAR(255), group_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE isValidInvited INT;
---     DECLARE isValidGroup INT;
---     DECLARE isUserInGroup INT;
--- 	DECLARE inJoinGroup INT;
---     -- Check if the invited user exists in the Users table
---     SELECT COUNT(*)
---     INTO isValidInvited
---     FROM Users
---     WHERE userName = invitedUsername;
-
---     -- Check if the group exists in the Groups table
---     SELECT COUNT(*)
---     INTO isValidGroup
---     FROM `Groups`
---     WHERE groupName = group_name;
-
---     -- Check if the invited user is already in the JoinGroup table for the specified group
---     SELECT COUNT(*)
---     INTO inJoinGroup
---     FROM JoinGroup
---     WHERE userName = invitedUsername AND groupName = group_name and status = 'pending';
--- 	 -- Check if the invited user is already a member of the group
---     SET isUserInGroup = CheckIsMember(invitedUsername, group_name);
-    
---     IF isValidInvited > 0 AND isValidGroup > 0 AND isUserInGroup = 0 AND inJoinGroup = 0 THEN
---         -- Invited user exists, group exists, and user is not already in the JoinGroup for the specified group
---         -- Proceed to create an invitation
---         INSERT INTO JoinGroup (userName, requestType, status, createAt, groupName)
---         VALUES (invitedUsername, 'invite', 'pending', NOW(), group_name);
-
---         -- Additional logic for further processing can be added here
-
---         RETURN TRUE; -- Return TRUE for successful invitation initiation
---     ELSE
---         -- Invalid invited user, group name, or user already in the JoinGroup, return FALSE
---         RETURN FALSE;
---     END IF;
--- END //
--- CREATE FUNCTION CheckIsAdmin(user_name VARCHAR(255), group_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE is_admin INT;
-
---     -- Check if the user is an admin in the group
---     SELECT COUNT(*)
---     INTO is_admin
---     FROM MemberOfGroup
---     WHERE userName = user_name AND groupName = group_name AND mRole = 'admin';
-
---     IF is_admin > 0 THEN
---         RETURN TRUE; -- User is an admin in the group
---     ELSE
---         RETURN FALSE; -- User is not an admin in the group
---     END IF;
--- END;
--- CREATE FUNCTION AcceptUsertoGroup(user_name VARCHAR(255), group_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE isAdmin BOOLEAN;
---     DECLARE isPendingMember INT;
---         -- Check if the user is already in JoinGroup with 'pending' status
---         SELECT COUNT(*)
---         INTO isPendingMember
---         FROM JoinGroup
---         WHERE userName = user_name AND groupName = group_name AND status = 'pending';
-
---         IF isPendingMember > 0 THEN
---             -- User is not in JoinGroup with 'pending' status, proceed with normal acceptance process
---             INSERT INTO MemberOfGroup (groupName, userName, mRole)
---             VALUES (group_name, user_name, 'member');
-
---             UPDATE JoinGroup
---             SET status = 'accepted'
---             WHERE userName = user_name AND groupName = group_name;
---             RETURN TRUE; -- Return TRUE for successful acceptance
--- 		ELSE
---             RETURN FALSE;
---         END IF;
--- END //
-
--- CREATE FUNCTION DenyUsertoGroup(user_name VARCHAR(255), group_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE isPendingMember INT;
-
---     -- Check if the user is already in JoinGroup with 'pending' status
---     SELECT COUNT(*)
---     INTO isPendingMember
---     FROM JoinGroup
---     WHERE userName = user_name AND groupName = group_name AND status = 'pending';
-
---     IF isPendingMember > 0 THEN
---         -- User is in JoinGroup with 'pending' status, deny their request
---         UPDATE JoinGroup
---         SET status = 'denied'
---         WHERE userName = user_name AND groupName = group_name;
-
---         RETURN TRUE; -- Return TRUE for successful denial
---     ELSE
---         -- User is not in JoinGroup with 'pending' status, or the group does not exist, return FALSE
---         RETURN FALSE;
---     END IF;
--- END //
-
--- CREATE FUNCTION LeaveGroup(user_name VARCHAR(255), group_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE isMember INT;
-
---     -- Check if the user is a member of the specified group
---     SELECT COUNT(*)
---     INTO isMember
---     FROM MemberOfGroup
---     WHERE userName = user_name AND groupName = group_name;
-
---     IF isMember > 0 THEN
---         -- User is a member of the group, proceed to remove them from the group
---         DELETE FROM MemberOfGroup
---         WHERE userName = user_name AND groupName = group_name;
-
---         -- Additional logic (if needed) can be added here
-        
---         RETURN TRUE; -- Return TRUE for successful leaving
---     ELSE
---         -- User is not a member of the group, or the group does not exist, return FALSE
---         RETURN FALSE;
---     END IF;
--- END //
+END
 
 CREATE FUNCTION CreateFolder(folder_name VARCHAR(255), parent_folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -367,230 +102,27 @@ BEGIN
 
         RETURN TRUE; -- Return TRUE for successful folder creation
     END IF;
-END //
-
--- CREATE FUNCTION CopyFolder(fromgroup_name VARCHAR(255), folder_name VARCHAR(255), toGroup_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE from_folder_id VARCHAR(255);
---     DECLARE to_folder_id VARCHAR(255);
---     DECLARE to_group_exists INT;
-
---     SELECT folderID INTO from_folder_id
---     FROM Folder
---     WHERE folderName = folder_name AND groupName = fromgroup_name;
-
---     IF from_folder_id IS NULL THEN
---         RETURN FALSE;
---     END IF;
-
---     SELECT COUNT(*) INTO to_group_exists
---     FROM `Groups`
---     WHERE groupName = toGroup_name;
-
---     IF to_group_exists = 0 THEN
---         RETURN FALSE;
---     END IF;
-
---     SELECT folderID INTO to_folder_id
---     FROM Folder
---     WHERE folderName = folder_name AND groupName = toGroup_name;
-
---     IF to_folder_id IS NOT NULL THEN
---         RETURN FALSE;
---     ELSE
---         SET to_folder_id = UUID();
---         INSERT INTO Folder (folderID, folderName, groupName, createAt)
---         VALUES (to_folder_id, folder_name, toGroup_name, NOW());
-
---         INSERT INTO File (fileID, folderID, fName, fileSize, folderName, groupName)
---         SELECT UUID(), to_folder_id, fName, fileSize, folderName, toGroup_name
---         FROM File
---         WHERE folderID = from_folder_id;
-
---         RETURN TRUE;
---     END IF;
--- END //
-
--- CREATE FUNCTION RemoveFolder(folder_name VARCHAR(255), group_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE folder_id VARCHAR(255);
---     DECLARE folder_exists INT;
-
---     -- Get the folder ID
---     SELECT folderID INTO folder_id
---     FROM Folder
---     WHERE folderName = folder_name AND groupName = group_name;
-
---     -- Check if the folder exists
---     SELECT COUNT(*) INTO folder_exists
---     FROM Folder
---     WHERE folderName = folder_name AND groupName = group_name;
-
---     IF folder_exists > 0 THEN
---         -- Delete files in the folder
---         DELETE FROM File
---         WHERE folderID = folder_id;
-
---         -- Remove the folder
---         DELETE FROM Folder
---         WHERE folderID = folder_id;
-
---         RETURN TRUE; -- Return TRUE for successful folder removal
---     ELSE
---         -- Folder does not exist, or the folder does not belong to the specified group, return FALSE
---         RETURN FALSE;
---     END IF;
--- END //
-
--- CREATE FUNCTION RenameFolder(group_name VARCHAR(255), folder_name VARCHAR(255), new_folder_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE folder_exists INT;
-
---     -- Check if the folder exists within the specified group
---     SELECT COUNT(*)
---     INTO folder_exists
---     FROM Folder
---     WHERE folderName = folder_name AND groupName = group_name;
-
---     IF folder_exists > 0 THEN
---         -- Folder exists in the specified group, proceed to rename it
---         UPDATE Folder
---         SET folderName = new_folder_name
---         WHERE folderName = folder_name AND groupName = group_name;
-
---         -- Update corresponding folder name in the File table
---         UPDATE `File`
---         SET folderName = new_folder_name
---         WHERE folderName = folder_name AND groupName = group_name;
-
---         RETURN TRUE; -- Return TRUE for successful folder rename
---     ELSE
---         -- Folder does not exist in the specified group, return FALSE
---         RETURN FALSE;
---     END IF;
--- END //
-
--- CREATE FUNCTION CreateFile(file_name VARCHAR(255), file_size BIGINT, group_name VARCHAR(255), folder_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE file_id VARCHAR(255);
---     DECLARE folder_id VARCHAR(255);
---     DECLARE group_exists INT;
---     DECLARE folder_exists INT;
---     DECLARE file_exists INT;
-    
---     -- Check if the group exists
---     SELECT COUNT(*)
---     INTO group_exists
---     FROM `Groups`
---     WHERE groupName = group_name;
-
---     IF group_exists > 0 THEN
---         -- Group exists, check if the folder exists within the group
---         SELECT folderID
---         INTO folder_id
---         FROM Folder
---         WHERE folderName = folder_name AND groupName = group_name;
-
---         IF folder_id IS NOT NULL THEN
---             -- Check if the file already exists in the folder
---             SELECT COUNT(*)
---             INTO file_exists
---             FROM File
---             WHERE fName = file_name AND folderName = folder_name AND groupName = group_name;
-
---             IF file_exists > 0 THEN
---                 -- File already exists in the folder within the group, return FALSE
---                 RETURN FALSE;
---             ELSE
---                 -- Generate a fileID using UUID()
---                 SET file_id = UUID();
-
---                 -- Insert the file into the File table
---                 INSERT INTO `File` (fileID, fName, fileSize, folderID, folderName, groupName)
---                 VALUES (file_id, file_name, file_size, folder_id, folder_name, group_name);
-
---                 RETURN TRUE; -- Return TRUE for successful file creation
---             END IF;
---         ELSE
---             -- Folder does not exist within the group, return FALSE
---             RETURN FALSE;
---         END IF;
---     ELSE
---         -- Group does not exist, return FALSE
---         RETURN FALSE;
---     END IF;
--- END //
-
-
-
--- CREATE FUNCTION RemoveFile(file_name VARCHAR(255), group_name VARCHAR(255), folder_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE file_exists INT;
-
---     -- Check if the file exists in the specified folder within the group
---     SELECT COUNT(*)
---     INTO file_exists
---     FROM `File`
---     WHERE fName = file_name AND groupName = group_name AND folderName = folder_name;
-
---     IF file_exists > 0 THEN
---         -- File exists, proceed to remove it
---         DELETE FROM `File`
---         WHERE fName = file_name AND groupName = group_name AND folderName = folder_name;
-
---         RETURN TRUE; -- Return TRUE for successful file removal
---     ELSE
---         -- File does not exist, return FALSE
---         RETURN FALSE;
---     END IF;
--- END //
-
--- CREATE FUNCTION RenameFile(file_name VARCHAR(255), group_name VARCHAR(255), folder_name VARCHAR(255), new_file_name VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE file_exists INT;
-
---     -- Check if the file exists in the specified folder within the group
---     SELECT COUNT(*)
---     INTO file_exists
---     FROM `File`
---     WHERE fName = file_name AND groupName = group_name AND folderName = folder_name;
-
---     IF file_exists > 0 THEN
---         -- File exists, and the new file name does not exist; proceed to rename it
---         UPDATE `File`
---         SET fName = new_file_name
---         WHERE fName = file_name AND groupName = group_name AND folderName = folder_name;
-
---         RETURN TRUE; -- Return TRUE for successful file renaming
---     ELSE
---         -- File does not exist or new file name already exists, return FALSE
---         RETURN FALSE;
---     END IF;
--- END //
+END
 
 CREATE FUNCTION GetFolderID(folder_name VARCHAR(255), user_name VARCHAR(255))
 RETURNS VARCHAR(255) DETERMINISTIC
 BEGIN
+    DECLARE folder_id VARCHAR(255);
     SELECT folderID INTO folder_id
     FROM Folder
     WHERE folderName = folder_name AND createBy = user_name;
     RETURN folder_id;
-END //
+END
 
 CREATE FUNCTION GetParentFolderID(folder_name VARCHAR(255), user_name VARCHAR(255))
 RETURNS VARCHAR(255) DETERMINISTIC
 BEGIN
+    DECLARE parent_folder_id VARCHAR(255);
     SELECT parentFolderID INTO parent_folder_id
     FROM Folder
     WHERE folderName = folder_name AND createBy = user_name;
     RETURN parent_folder_id;
-END //
+END
 
 
 CREATE FUNCTION CopyFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
@@ -600,7 +132,8 @@ BEGIN
     DECLARE done INT DEFAULT FALSE;
     DECLARE cur_file_name VARCHAR(255);
     DECLARE cur_file_size BIGINT;
-    
+    DECLARE cur_folder_id VARCHAR(255);
+
     -- Copy files from source folder to destination folder
     DECLARE file_cursor CURSOR FOR 
         SELECT fName, fileSize 
@@ -608,9 +141,6 @@ BEGIN
         WHERE folderID = from_folder_id;
     
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-    
-    -- Start transaction
-    START TRANSACTION;
     
     -- Copy files
     OPEN file_cursor;
@@ -630,7 +160,7 @@ BEGIN
     SET done = FALSE;
     BEGIN
         DECLARE subfolder_cursor CURSOR FOR
-            SELECT folderID, folderName
+            SELECT folderID
             FROM Folder
             WHERE parentFolderID = from_folder_id;
             
@@ -638,7 +168,7 @@ BEGIN
         
         OPEN subfolder_cursor;
         subfolder_loop: LOOP
-            FETCH subfolder_cursor INTO new_folder_id, cur_file_name;
+            FETCH subfolder_cursor INTO cur_folder_id;
             IF done THEN
                 LEAVE subfolder_loop;
             END IF;
@@ -648,20 +178,18 @@ BEGIN
             INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createAt)
             SELECT new_folder_id, folderName, to_folder_id, createBy, NOW()
             FROM Folder
-            WHERE folderID = from_folder_id;
+            WHERE folderID = cur_folder_id;
             
             -- Recursively copy contents of subfolder
-            IF NOT CopyFolder(from_folder_id, new_folder_id) THEN
-                ROLLBACK;
+             IF NOT CopyFolder(cur_folder_id, new_folder_id) THEN
                 RETURN FALSE;
             END IF;
         END LOOP;
         CLOSE subfolder_cursor;
     END;
     
-    COMMIT;
     RETURN TRUE;
-END //  
+END
 
 CREATE FUNCTION MoveFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -671,22 +199,18 @@ BEGIN
        NOT EXISTS (SELECT 1 FROM Folder WHERE folderID = to_folder_id) THEN
         RETURN FALSE;
     END IF;
-    
-    START TRANSACTION;
-    
+        
     -- Update parent folder ID
     UPDATE Folder SET parentFolderID = to_folder_id 
     WHERE folderID = from_folder_id;
     
     -- If successful, commit and return true
     IF ROW_COUNT() > 0 THEN
-        COMMIT;
         RETURN TRUE;
     ELSE
-        ROLLBACK;
         RETURN FALSE;
     END IF;
-END //
+END
 
 CREATE FUNCTION RenameFolder(folder_id VARCHAR(255), new_name VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -711,7 +235,7 @@ BEGIN
     WHERE folderID = folder_id;
     
     RETURN TRUE;
-END //
+END
 
 CREATE FUNCTION DeleteFolder(folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -725,9 +249,7 @@ BEGIN
         WHERE parentFolderID = folder_id;
         
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-    
-    START TRANSACTION;
-    
+        
     -- Delete all files in the folder
     DELETE FROM File WHERE folderID = folder_id;
     
@@ -740,7 +262,6 @@ BEGIN
         END IF;
         
         IF NOT DeleteFolder(sub_folder_id) THEN
-            ROLLBACK;
             CLOSE folder_cursor;
             RETURN FALSE;
         END IF;
@@ -751,9 +272,8 @@ BEGIN
     -- Delete the folder itself
     DELETE FROM Folder WHERE folderID = folder_id;
     
-    COMMIT;
     RETURN TRUE;
-END //
+END
 
 -- File operations
 CREATE FUNCTION CreateFile(file_name VARCHAR(255), file_size BIGINT, folder_id VARCHAR(255))
@@ -777,7 +297,7 @@ BEGIN
     VALUES (new_file_id, folder_id, file_name, file_size);
     
     RETURN new_file_id;
-END //
+END
 
 CREATE FUNCTION CopyFile(file_id VARCHAR(255), to_folder_id VARCHAR(255))
 RETURNS VARCHAR(255) DETERMINISTIC
@@ -798,7 +318,7 @@ BEGIN
     WHERE fileID = file_id;
     
     RETURN new_file_id;
-END //
+END
 
 CREATE FUNCTION MoveFile(file_id VARCHAR(255), to_folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -814,7 +334,7 @@ BEGIN
     WHERE fileID = file_id;
     
     RETURN TRUE;
-END //
+END
 
 CREATE FUNCTION RenameFile(file_id VARCHAR(255), new_name VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -839,39 +359,41 @@ BEGIN
     WHERE fileID = file_id;
     
     RETURN TRUE;
-END //
+END
 
 CREATE FUNCTION DeleteFile(file_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
     DELETE FROM File WHERE fileID = file_id;
     RETURN TRUE;
-END //
+END
 
 CREATE FUNCTION GetFileID(file_name VARCHAR(255), folder_id VARCHAR(255))
 RETURNS VARCHAR(255) DETERMINISTIC
 BEGIN
+    DECLARE file_id VARCHAR(255);
     SELECT fileID INTO file_id
     FROM File
     WHERE fName = file_name AND folderID = folder_id;
     RETURN file_id;
-END //  
+END  
 
 CREATE FUNCTION GetFileAccess(file_id VARCHAR(255))
 RETURNS ENUM('private', 'view', 'download') DETERMINISTIC
 BEGIN
+    DECLARE access ENUM('private', 'view', 'download');
     SELECT access INTO access
     FROM File
     WHERE fileID = file_id;
     RETURN access;
-END //
+END
 
 CREATE FUNCTION SetFileAccess(file_id VARCHAR(255), access ENUM('private', 'view', 'download'))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
     UPDATE File SET access = access WHERE fileID = file_id;
     RETURN TRUE;
-END //
+END
 
 CREATE FUNCTION SetFolderAccess(folder_id VARCHAR(255), access ENUM('private', 'view', 'download'))
 RETURNS BOOLEAN DETERMINISTIC
@@ -879,29 +401,21 @@ BEGIN
     UPDATE Folder SET access = access WHERE folderID = folder_id;
     UPDATE File SET access = access WHERE folderID = folder_id;
     RETURN TRUE;
-END //
+END
 
 CREATE FUNCTION GetFolderAccess(folder_id VARCHAR(255))
 RETURNS ENUM('private', 'view', 'download') DETERMINISTIC
 BEGIN
+    DECLARE access ENUM('private', 'view', 'download');
     SELECT access INTO access
     FROM Folder
     WHERE folderID = folder_id;
     RETURN access;
-END //
+END
 
-CREATE FUNCTION SearchFile(file_name VARCHAR(255)) 
-RETURNS TABLE (
-    fileID VARCHAR(255),
-    folderID VARCHAR(255),
-    fileName VARCHAR(255),
-    fileSize BIGINT,
-    folderName VARCHAR(255),
-    createBy VARCHAR(255),
-    access ENUM('private', 'view', 'download')
-) DETERMINISTIC
+CREATE PROCEDURE SearchFile(IN file_name VARCHAR(255))
 BEGIN
-    RETURN SELECT 
+    SELECT 
         f.fileID,
         f.folderID,
         f.fName as fileName,
@@ -912,17 +426,16 @@ BEGIN
     FROM File f
     JOIN Folder fo ON f.folderID = fo.folderID
     WHERE f.fName LIKE CONCAT('%', file_name, '%') AND (f.access = 'view' OR f.access = 'download');
-END //
+END
 
-CREATE FUNCTION SearchFolder(folder_name VARCHAR(255)) 
-RETURNS TABLE (
-    folderID VARCHAR(255),
-    folderName VARCHAR(255),
-    createBy VARCHAR(255),
-    access ENUM('private', 'view', 'download')
-) DETERMINISTIC
+CREATE PROCEDURE SearchFolder(IN folder_name VARCHAR(255))
 BEGIN
-    RETURN SELECT * FROM Folder WHERE folderName LIKE CONCAT('%', folder_name, '%') AND (access = 'view' OR access = 'download');
-END //
+    SELECT 
+        folderID,
+        folderName,
+        createBy,
+        access
+    FROM Folder
+    WHERE folderName LIKE CONCAT('%', folder_name, '%') AND (access = 'view' OR access = 'download');
+END
 
-DELIMITER ;
