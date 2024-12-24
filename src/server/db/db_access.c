@@ -122,14 +122,14 @@ bool db_login(const char *user_name, const char *password)
     return success;
 }
 
-bool db_create_file(const char* file_name, long file_size, const char* folder_id) {
+bool db_create_file(const char* file_name, long file_size, const char* folder_id, const char* user_name) {
     MYSQL *conn = db_connect();
     if (!conn) return false;
 
     char query[512];
     snprintf(query, sizeof(query),
-             "SELECT CreateFile('%s', %ld, '%s') AS file_id",
-             file_name, file_size, folder_id);
+             "SELECT CreateFile('%s', %ld, '%s', '%s') AS file_id",
+             file_name, file_size, folder_id, user_name);
 
     if (mysql_query(conn, query)) {
         printf("Create file failed: %s\n", mysql_error(conn));
@@ -568,7 +568,8 @@ FileList* db_search_file(const char* file_name) {
         list->files[i].file_size = atol(row[3]);
         list->files[i].folder_name = strdup(row[4]);
         list->files[i].created_by = strdup(row[5]);
-        list->files[i].access = strdup(row[6]);
+        list->files[i].created_at = strdup(row[6]);
+        list->files[i].access = strdup(row[7]);
         i++;
     }
 
@@ -805,4 +806,27 @@ bool db_delete_file(const char* file_id) {
     mysql_free_result(result);
     db_disconnect(conn);
     return success;
+}
+
+char* db_get_file_id(const char* file_name, const char* parent_folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return NULL;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT GetFileID('%s', '%s') AS file_id",
+             file_name, parent_folder_id);
+
+    if (mysql_query(conn, query)) {
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    char* file_id = row && row[0] ? strdup(row[0]) : NULL;
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return file_id;
 }

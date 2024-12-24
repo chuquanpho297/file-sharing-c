@@ -23,6 +23,10 @@ bool copy_folder_handler(const char* folder_id, const char* parent_folder_id, co
     return db_copy_folder(folder_id, parent_folder_id, user_name);
 }
 
+bool copy_all_content_folder_handler(const char* folder_id, const char* parent_folder_id) {
+    return db_copy_all_content_folder(folder_id, parent_folder_id);
+}
+
 bool move_folder_handler(const char* folder_id, const char* parent_folder_id, const char* user_name) {
     return db_move_folder(folder_id, parent_folder_id, user_name);
 }

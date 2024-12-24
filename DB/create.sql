@@ -28,6 +28,8 @@ CREATE TABLE `File` (
     `folderID` VARCHAR(255) NOT NULL,
     `fName` VARCHAR(255) NOT NULL,
     `fileSize` BIGINT NOT NULL,
+    `createBy` VARCHAR(255) NOT NULL,
+    `createAt` TIMESTAMP NOT NULL,
     `access` ENUM('private', 'view', 'download') DEFAULT 'private',
     PRIMARY KEY (`fileID`),
     CONSTRAINT `folderID` FOREIGN KEY (`folderID`) REFERENCES `Folder`(`folderID`)
@@ -289,7 +291,7 @@ BEGIN
 END //
 
 -- File operations
-CREATE FUNCTION CreateFile(file_name VARCHAR(255), file_size BIGINT, folder_id VARCHAR(255))
+CREATE FUNCTION CreateFile(file_name VARCHAR(255), file_size BIGINT, folder_id VARCHAR(255), user_name VARCHAR(255))
 RETURNS VARCHAR(255) DETERMINISTIC
 BEGIN
     DECLARE new_file_id VARCHAR(255);
@@ -306,8 +308,8 @@ BEGIN
     
     -- Create new file
     SET new_file_id = UUID();
-    INSERT INTO File (fileID, folderID, fName, fileSize)
-    VALUES (new_file_id, folder_id, file_name, file_size);
+    INSERT INTO File (fileID, folderID, fName, fileSize, createBy, createAt)
+    VALUES (new_file_id, folder_id, file_name, file_size, user_name, NOW());
     
     RETURN new_file_id;
 END //
@@ -435,6 +437,7 @@ BEGIN
         f.fileSize,
         fo.folderName,
         fo.createBy,
+        f.createdAt,
         f.access
     FROM File f
     JOIN Folder fo ON f.folderID = fo.folderID
