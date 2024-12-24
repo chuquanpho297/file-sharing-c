@@ -6,7 +6,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include <time.h>
-#include "../models/join_model.h"
 #include "../../utils/config.h"
 
 static MYSQL *connection = NULL;
@@ -44,550 +43,6 @@ void db_disconnect(MYSQL *conn)
         connection = NULL;
     }
 }
-
-bool db_create_file(const char *file_name, long file_size, const char *folder_id)
-{
-    MYSQL *conn = db_connect();
-    if (!conn) return false;
-
-    char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT CreateFile('%s', %ld, '%s') AS file_id",
-             file_name, file_size, folder_id);
-
-    if (mysql_query(conn, query)) {
-        printf("Create file failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    MYSQL_ROW row = mysql_fetch_row(result);
-    bool success = (row && row[0] != NULL); // Not NULL means file was created
-
-    mysql_free_result(result);
-    db_disconnect(conn);
-    return success;
-}
-
-// bool db_delete_file(const char *file_name, const char *group_name, const char *folder_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
-
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT RemoveFile('%s', '%s', '%s') AS Success",
-//              file_name, group_name, folder_name);
-
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Delete file failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Delete file failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
-
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
-
-// bool db_create_folder(const char *folder_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//     {
-//         printf("Create folder failed: %s\n", mysql_error(conn));
-//         return false;
-//     }
-
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT CreateFolder('%s', '%s') AS Success",
-//              folder_name, group_name);
-
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Create folder failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Create folder failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
-
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
-
-// bool db_delete_folder(const char *folder_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
-
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT RemoveFolder('%s', '%s') AS Success",
-//              folder_name, group_name);
-
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Delete folder failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Delete folder failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
-
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
-
-FolderContents *db_folder_contents(const char *folder_name)
-{
-    MYSQL *conn = db_connect();
-    if (conn == NULL)
-        return NULL;
-
-    char query[1024];
-    snprintf(query, sizeof(query),
-             "SELECT fName, fileSize FROM File WHERE folderName='%s'",
-             folder_name);
-
-    if (mysql_query(conn, query) != 0)
-    {
-        printf("Folder contents failed: %s\n", mysql_error(conn));
-        return NULL;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    if (result == NULL)
-    {
-        printf("Folder contents failed: %s\n", mysql_error(conn));
-        return NULL;
-    }
-
-    FolderContents *contents = folder_contents_create();
-    if (contents == NULL)
-    {
-        mysql_free_result(result);
-        return NULL;
-    }
-
-    contents->file_count = mysql_num_rows(result);
-    contents->files = malloc(contents->file_count * sizeof(FileInfo));
-    contents->folder_name = strdup(folder_name);
-
-    int i = 0;
-    MYSQL_ROW row;
-    while ((row = mysql_fetch_row(result)))
-    {
-        contents->files[i].file_name = strdup(row[0]);
-        contents->files[i].file_size = atol(row[1]);
-        i++;
-    }
-
-    mysql_free_result(result);
-    return contents;
-}
-
-// bool db_request_join(const char *user_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (conn == NULL)
-//         return false;
-
-//     char query[1024];
-//     snprintf(query, sizeof(query),
-//              "SELECT RequestToJoinGroup('%s','%s') AS Success;",
-//              user_name, group_name);
-
-//     if (mysql_query(conn, query) != 0)
-//     {
-//         printf("Request join failed: %s\n", mysql_error(conn));
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (result == NULL)
-//     {
-//         printf("Request join failed: %s\n", mysql_error(conn));
-//         return false;
-//     }
-
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     bool success = (row && row[0] && atoi(row[0]) == 1);
-
-//     mysql_free_result(result);
-//     return success;
-// }
-
-// bool db_accept_join(const char *user_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (conn == NULL)
-//         return false;
-
-//     char query[1024];
-//     snprintf(query, sizeof(query),
-//              "SELECT AcceptUsertoGroup('%s', '%s') AS Success",
-//              user_name, group_name);
-
-//     if (mysql_query(conn, query) != 0)
-//     {
-//         printf("Accept join failed: %s\n", mysql_error(conn));
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (result == NULL)
-//     {
-//         printf("Accept join failed: %s\n", mysql_error(conn));
-//         return false;
-//     }
-
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     bool success = (row && row[0] && atoi(row[0]) == 1);
-
-//     mysql_free_result(result);
-//     return success;
-// }
-
-// JoinRequestList *db_list_join_requests(const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (conn == NULL)
-//         return NULL;
-
-//     char query[1024];
-//     snprintf(query, sizeof(query),
-//              "SELECT userName, createAt FROM `JoinGroup` WHERE status = 'pending' AND groupName = '%s';",
-//              group_name);
-
-//     if (mysql_query(conn, query) != 0)
-//     {
-//         printf("List join requests failed: %s\n", mysql_error(conn));
-//         return NULL;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (result == NULL)
-//     {
-//         printf("List join requests failed: %s\n", mysql_error(conn));
-//         return NULL;
-//     }
-
-//     JoinRequestList *list = join_request_list_create();
-//     if (list == NULL)
-//     {
-//         mysql_free_result(result);
-//         return NULL;
-//     }
-
-//     list->request_count = mysql_num_rows(result);
-//     list->requests = malloc(list->request_count * sizeof(JoinRequest));
-
-//     int i = 0;
-//     MYSQL_ROW row;
-//     while ((row = mysql_fetch_row(result)))
-//     {
-//         list->requests[i].user_name = strdup(row[0]);
-
-//         // Convert timestamp string to time_t
-//         struct tm tm = {0};
-//         strptime(row[1], "%Y-%m-%d %H:%M:%S", &tm);
-//         list->requests[i].request_time = mktime(&tm);
-//         i++;
-//     }
-
-//     mysql_free_result(result);
-//     return list;
-// }
-
-// bool db_rename_file(const char *file_name, const char *new_name, const char *group_name, const char *folder_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
-
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT RenameFile('%s', '%s', '%s', '%s') AS Success",
-//              file_name, group_name, folder_name, new_name);
-
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Rename file failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     bool success = (row && row[0] && row[0][0] == '1');
-
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
-
-// bool db_create_group(const char *user_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
-
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT CreateNewGroup('%s', '%s') AS Success",
-//              user_name, group_name);
-
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Create group failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     bool success = (row && row[0] && row[0][0] == '1');
-//     db_disconnect(conn);
-//     return success;
-// }
-
-// bool db_check_is_admin(const char *user_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
-
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT CheckIsAdmin('%s', '%s') AS Success",
-//              user_name, group_name);
-
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Check is admin failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     bool success = (row && row[0] && row[0][0] == '1');
-//     db_disconnect(conn);
-//     return success;
-// }
-
-// bool db_check_is_member(const char *user_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
-
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT CheckIsMember('%s', '%s') AS Success",
-//              user_name, group_name);
-
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Check is member failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Check is member failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
-//     db_disconnect(conn);
-//     return success;
-// }
-
-// bool db_remove_member(const char *member_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
-
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT LeaveGroup('%s','%s') AS Success;",
-//              member_name, group_name);
-
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Remove member failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Remove member failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
-
-// bool db_invite_to_group(const char *invited_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
-
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT InviteToGroup('%s', '%s') AS Success",
-//              invited_name, group_name);
-
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Invite to group failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Invite to group failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
-
-// GroupMemberList *db_list_members(const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return NULL;
-
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT userName, mRole FROM MemberOfGroup WHERE groupName='%s'", group_name);
-
-//     if (mysql_query(conn, query))
-//     {
-//         printf("List members failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return NULL;
-//     }
-
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("List members failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return NULL;
-//     }
-//     GroupMemberList *list = malloc(sizeof(GroupMemberList));
-//     if (!list)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return NULL;
-//     }
-//     list->member_count = mysql_num_rows(result);
-//     list->members = malloc(list->member_count * sizeof(GroupMember));
-
-//     MYSQL_ROW row;
-//     int i = 0;
-//     while ((row = mysql_fetch_row(result)))
-//     {
-//         list->members[i].user_name = strdup(row[0]);
-//         list->members[i].role = strdup(row[1]);
-//         i++;
-//     }
-
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return list;
-// }
 
 bool db_create_user(const char *user_name, const char *password)
 {
@@ -667,383 +122,594 @@ bool db_login(const char *user_name, const char *password)
     return success;
 }
 
-// GroupList *db_list_all_groups(void)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//     {
-//         printf("List all groups failed: %s\n", mysql_error(conn));
-//         return NULL;
-//     }
+bool db_create_file(const char* file_name, long file_size, const char* folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
 
-//     char query[512] = "SELECT groupName, createBy, createAt FROM `Groups`";
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT CreateFile('%s', %ld, '%s') AS file_id",
+             file_name, file_size, folder_id);
 
-//     if (mysql_query(conn, query))
-//     {
-//         printf("List all groups failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return NULL;
-//     }
+    if (mysql_query(conn, query)) {
+        printf("Create file failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
 
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("List all groups failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return NULL;
-//     }
-//     GroupList *list = group_list_create();
-//     list->group_count = mysql_num_rows(result);
-//     list->groups = malloc(list->group_count * sizeof(Group));
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] != NULL);
 
-//     MYSQL_ROW row;
-//     int i = 0;
-//     while ((row = mysql_fetch_row(result)))
-//     {
-//         list->groups[i].group_name = strdup(row[0]);
-//         list->groups[i].created_by = strdup(row[1]);
-//         list->groups[i].created_at = strdup(row[2]);
-//         i++;
-//     }
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
 
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return list;
-// }
+bool db_create_folder(const char* folder_name, const char* parent_folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
 
-// bool db_deny_join(const char *user_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT CreateFolder('%s', '%s') AS Success",
+             folder_name, parent_folder_id);
 
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT DenyUsertoGroup('%s','%s') AS Success;",
-//              user_name, group_name);
+    if (mysql_query(conn, query)) {
+        printf("Create folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
 
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Deny join failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
 
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Deny join failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
 
-// JoinRequestStatus *db_get_join_status(const char *user_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return NULL;
+char* db_get_root_folder_id(const char* user_name) {
+    MYSQL *conn = db_connect();
+    if (!conn) return NULL;
 
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT groupName, status, createAt FROM `JoinGroup` WHERE userName = '%s' and requestType = 'join';",
-//              user_name);
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT GetRootFolderID('%s') AS folder_id",
+             user_name);
 
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Get join status failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return NULL;
-//     }
+    if (mysql_query(conn, query)) {
+        printf("Get root folder ID failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
 
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Get join status failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return NULL;
-//     }
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    char* folder_id = row && row[0] ? strdup(row[0]) : NULL;
 
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return NULL;
-//     }
-//     JoinRequestStatus *status = malloc(sizeof(JoinRequestStatus));
-//     if (!status)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return NULL;
-//     }
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return folder_id;
+}
 
-//     status->group_name = strdup(row[0]);
-//     status->status = strcmp(row[1], "pending") == 0 ? JOIN_STATUS_PENDING : strcmp(row[1], "accepted") == 0 ? JOIN_STATUS_ACCEPTED
-//                                                                                                             : JOIN_STATUS_DENIED;
-//     status->request_time = strdup(row[2]);
+FileList* db_get_all_file_in_folder(const char* folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return NULL;
 
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return status;
-// }
+    char query[512];
+    snprintf(query, sizeof(query), "CALL GetAllFileInFolder('%s')", folder_id);
 
-// bool db_rename_folder(const char *group_name, const char *folder_name, const char *new_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
+    if (mysql_query(conn, query)) {
+        printf("Get files failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
 
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT RenameFolder('%s', '%s', '%s') AS Success",
-//              group_name, folder_name, new_name);
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (!result) {
+        db_disconnect(conn);
+        return NULL;
+    }
 
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Rename folder failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
+    FileList* list = malloc(sizeof(FileList));
+    list->count = mysql_num_rows(result);
+    list->files = malloc(list->count * sizeof(FileStruct));
 
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Rename folder failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
+    MYSQL_ROW row;
+    int i = 0;
+    while ((row = mysql_fetch_row(result))) {
+        list->files[i].file_id = strdup(row[0]);
+        list->files[i].folder_id = strdup(row[1]);
+        list->files[i].file_name = strdup(row[2]);
+        list->files[i].file_size = atol(row[3]);
+        i++;
+    }
 
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return list;
+}
 
-// bool db_copy_folder(const char *from_group, const char *folder_name, const char *to_group)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
+bool db_create_root_folder(const char* folder_name, const char* user_name) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
 
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT CopyFolder('%s', '%s', '%s') AS Success",
-//              from_group, folder_name, to_group);
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT CreateRootFolder('%s', '%s') AS Success",
+             folder_name, user_name);
 
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Copy folder failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
+    if (mysql_query(conn, query)) {
+        printf("Create root folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
 
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Copy folder failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
 
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
 
-// bool db_join_group(const char *user_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
+char* db_get_folder_id(const char* folder_name, const char* user_name, const char* parent_folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return NULL;
 
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT RequestToJoinGroup('%s', '%s') AS Success",
-//              user_name, group_name);
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT GetFolderID('%s', '%s', '%s') AS folder_id",
+             folder_name, user_name, parent_folder_id);
 
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Join group failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
+    if (mysql_query(conn, query)) {
+        printf("Get folder ID failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
 
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Join group failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    char* folder_id = row && row[0] ? strdup(row[0]) : NULL;
 
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return folder_id;
+}
 
-// bool db_leave_group(const char *user_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
+char* db_get_parent_folder_id(const char* folder_name, const char* user_name) {
+    MYSQL *conn = db_connect();
+    if (!conn) return NULL;
 
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT LeaveGroup('%s', '%s') AS Success",
-//              user_name, group_name);
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT parentFolderID FROM Folder WHERE folderName='%s' AND createBy='%s'",
+             folder_name, user_name);
 
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Leave group failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
+    if (mysql_query(conn, query)) {
+        printf("Get parent folder ID failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
 
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         printf("Leave group failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    char* parent_id = row && row[0] ? strdup(row[0]) : NULL;
 
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return parent_id;
+}
 
-// bool db_invite_join(const char *user_name, const char *group_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return false;
+bool db_copy_all_content_folder(const char* from_folder_id, const char* to_folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
 
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT InviteToGroup('%s','%s') AS Success;",
-//              user_name, group_name);
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT CopyAllContentFolder('%s', '%s') AS Success",
+             from_folder_id, to_folder_id);
 
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Invite join failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return false;
-//     }
+    if (mysql_query(conn, query)) {
+        printf("Copy folder contents failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
 
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return false;
-//     }
-//     bool success = (row && row[0] && row[0][0] == '1');
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
 
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return success;
-// }
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
 
-// JoinRequestStatus *db_get_invitation_status(const char *user_name)
-// {
-//     MYSQL *conn = db_connect();
-//     if (!conn)
-//         return NULL;
+bool db_move_all_content_folder(const char* from_folder_id, const char* to_folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
 
-//     char query[512];
-//     snprintf(query, sizeof(query),
-//              "SELECT groupName, status, createAt FROM `JoinGroup` WHERE userName = '%s' and requestType = 'invite';",
-//              user_name);
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT MoveAllContentFolder('%s', '%s') AS Success",
+             from_folder_id, to_folder_id);
 
-//     if (mysql_query(conn, query))
-//     {
-//         printf("Get invitation status failed: %s\n", mysql_error(conn));
-//         db_disconnect(conn);
-//         return NULL;
-//     }
+    if (mysql_query(conn, query)) {
+        printf("Move folder contents failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
 
-//     MYSQL_RES *result = mysql_store_result(conn);
-//     if (!result)
-//     {
-//         db_disconnect(conn);
-//         return NULL;
-//     }
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
 
-//     MYSQL_ROW row = mysql_fetch_row(result);
-//     if (!row)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return NULL;
-//     }
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
 
-//     JoinRequestStatus *status = malloc(sizeof(JoinRequestStatus));
-//     if (!status)
-//     {
-//         mysql_free_result(result);
-//         db_disconnect(conn);
-//         return NULL;
-//     }
+bool db_copy_folder(const char* folder_id, const char* parent_folder_id, const char* user_name) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
 
-//     status->group_name = strdup(row[0]);
-//     status->status = strcmp(row[1], "pending") == 0 ? JOIN_STATUS_PENDING : strcmp(row[1], "accepted") == 0 ? JOIN_STATUS_ACCEPTED
-//                                                                                                             : JOIN_STATUS_DENIED;
-//     status->request_time = strdup(row[2]);
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT CopyFolder('%s', '%s', '%s') AS Success",
+             folder_id, parent_folder_id, user_name);
 
-//     mysql_free_result(result);
-//     db_disconnect(conn);
-//     return status;
-// }
+    if (mysql_query(conn, query)) {
+        printf("Copy folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
+
+bool db_move_folder(const char* folder_id, const char* parent_folder_id, const char* user_name) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT MoveFolder('%s', '%s', '%s') AS Success",
+             folder_id, parent_folder_id, user_name);
+
+    if (mysql_query(conn, query)) {
+        printf("Move folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
+
+bool db_delete_folder(const char* folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT DeleteFolder('%s') AS Success",
+             folder_id);
+
+    if (mysql_query(conn, query)) {
+        printf("Delete folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
+
+bool db_rename_folder(const char* folder_id, const char* new_name) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT RenameFolder('%s', '%s') AS Success",
+             folder_id, new_name);
+
+    if (mysql_query(conn, query)) {
+        printf("Rename folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
+
+FolderList* db_get_all_folder_in_folder(const char* folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return NULL;
+
+    char query[512];
+    snprintf(query, sizeof(query), "CALL GetAllFolderInFolder('%s')", folder_id);
+
+    if (mysql_query(conn, query)) {
+        printf("Get folders failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (!result) {
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    FolderList* list = malloc(sizeof(FolderList));
+    list->count = mysql_num_rows(result);
+    list->folders = malloc(list->count * sizeof(FolderStruct));
+
+    MYSQL_ROW row;
+    int i = 0;
+    while ((row = mysql_fetch_row(result))) {
+        list->folders[i].folder_id = strdup(row[0]);
+        list->folders[i].folder_name = strdup(row[1]);
+        list->folders[i].created_by = strdup(row[2]);
+        list->folders[i].parent_folder_id = row[3] ? strdup(row[3]) : NULL;
+        list->folders[i].created_at = strdup(row[4]);
+        list->folders[i].access = strdup(row[5]);
+        i++;
+    }
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return list;
+}
+
+bool db_check_folder_exist(const char* folder_name, const char* user_name, const char* parent_folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT CheckFolderExist('%s', '%s', '%s') AS Exists",
+             folder_name, user_name, parent_folder_id);
+
+    if (mysql_query(conn, query)) {
+        printf("Check folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool exists = (row && row[0] && row[0][0] == '1');
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return exists;
+}
+
+bool db_check_file_exist(const char* file_name, const char* user_name, const char* parent_folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT CheckFileExist('%s', '%s', '%s') AS Exists",
+             file_name, user_name, parent_folder_id);
+
+    if (mysql_query(conn, query)) {
+        printf("Check file failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool exists = (row && row[0] && row[0][0] == '1');
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return exists;
+}
+
+FileList* db_search_file(const char* file_name) {
+    MYSQL *conn = db_connect();
+    if (!conn) return NULL;
+
+    char query[512];
+    snprintf(query, sizeof(query), "CALL SearchFile('%s')", file_name);
+
+    if (mysql_query(conn, query)) {
+        printf("Search file failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (!result) {
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    FileList* list = malloc(sizeof(FileList));
+    list->count = mysql_num_rows(result);
+    list->files = malloc(list->count * sizeof(FileStruct));
+
+    MYSQL_ROW row;
+    int i = 0;
+    while ((row = mysql_fetch_row(result))) {
+        list->files[i].file_id = strdup(row[0]);
+        list->files[i].folder_id = strdup(row[1]);
+        list->files[i].file_name = strdup(row[2]);
+        list->files[i].file_size = atol(row[3]);
+        list->files[i].folder_name = strdup(row[4]);
+        list->files[i].created_by = strdup(row[5]);
+        list->files[i].access = strdup(row[6]);
+        i++;
+    }
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return list;
+}
+
+FolderList* db_search_folder(const char* folder_name) {
+    MYSQL *conn = db_connect();
+    if (!conn) return NULL;
+
+    char query[512];
+    snprintf(query, sizeof(query), "CALL SearchFolder('%s')", folder_name);
+
+    if (mysql_query(conn, query)) {
+        printf("Search folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (!result) {
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    FolderList* list = malloc(sizeof(FolderList));
+    list->count = mysql_num_rows(result);
+    list->folders = malloc(list->count * sizeof(FolderStruct));
+
+    MYSQL_ROW row;
+    int i = 0;
+    while ((row = mysql_fetch_row(result))) {
+        list->folders[i].folder_id = strdup(row[0]);
+        list->folders[i].folder_name = strdup(row[1]);
+        list->folders[i].created_by = strdup(row[2]);
+        list->folders[i].access = strdup(row[3]);
+        i++;
+    }
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return list;
+}
+
+bool db_set_file_access(const char* file_id, const char* access) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT SetFileAccess('%s', '%s') AS Success",
+             file_id, access);
+
+    if (mysql_query(conn, query)) {
+        printf("Set file access failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
+
+bool db_set_folder_access(const char* folder_id, const char* access) {
+    MYSQL *conn = db_connect();
+    if (!conn) return false;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT SetFolderAccess('%s', '%s') AS Success",
+             folder_id, access);
+
+    if (mysql_query(conn, query)) {
+        printf("Set folder access failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool success = (row && row[0] && row[0][0] == '1');
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return success;
+}
+
+char* db_get_file_access(const char* file_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return NULL;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT GetFileAccess('%s') AS access",
+             file_id);
+
+    if (mysql_query(conn, query)) {
+        printf("Get file access failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    char* access = row && row[0] ? strdup(row[0]) : NULL;
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return access;
+}
+
+char* db_get_folder_access(const char* folder_id) {
+    MYSQL *conn = db_connect();
+    if (!conn) return NULL;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT GetFolderAccess('%s') AS access",
+             folder_id);
+
+    if (mysql_query(conn, query)) {
+        printf("Get folder access failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    char* access = row && row[0] ? strdup(row[0]) : NULL;
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return access;
+}
 
 bool db_copy_file(const char* file_id, const char* to_folder_id) {
     MYSQL *conn = db_connect();
@@ -1062,7 +728,7 @@ bool db_copy_file(const char* file_id, const char* to_folder_id) {
 
     MYSQL_RES *result = mysql_store_result(conn);
     MYSQL_ROW row = mysql_fetch_row(result);
-    bool success = (row && row[0] != NULL); // Not NULL means file was copied
+    bool success = (row && row[0] != NULL);
 
     mysql_free_result(result);
     db_disconnect(conn);
@@ -1117,17 +783,17 @@ bool db_rename_file(const char* file_id, const char* new_name) {
     return success;
 }
 
-bool db_create_folder(const char* folder_name, const char* parent_folder_id) {
+bool db_delete_file(const char* file_id) {
     MYSQL *conn = db_connect();
     if (!conn) return false;
 
     char query[512];
     snprintf(query, sizeof(query),
-             "SELECT CreateFolder('%s', '%s') AS Success",
-             folder_name, parent_folder_id);
+             "SELECT DeleteFile('%s') AS Success",
+             file_id);
 
     if (mysql_query(conn, query)) {
-        printf("Create folder failed: %s\n", mysql_error(conn));
+        printf("Delete file failed: %s\n", mysql_error(conn));
         db_disconnect(conn);
         return false;
     }
@@ -1140,213 +806,3 @@ bool db_create_folder(const char* folder_name, const char* parent_folder_id) {
     db_disconnect(conn);
     return success;
 }
-
-bool db_copy_folder(const char* from_folder_id, const char* to_folder_id) {
-    MYSQL *conn = db_connect();
-    if (!conn) return false;
-
-    char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT CopyFolder('%s', '%s') AS Success",
-             from_folder_id, to_folder_id);
-
-    if (mysql_query(conn, query)) {
-        printf("Copy folder failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    MYSQL_ROW row = mysql_fetch_row(result);
-    bool success = (row && row[0] && row[0][0] == '1');
-
-    mysql_free_result(result);
-    db_disconnect(conn);
-    return success;
-}
-
-bool db_move_folder(const char* from_folder_id, const char* to_folder_id) {
-    MYSQL *conn = db_connect();
-    if (!conn) return false;
-
-    char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT MoveFolder('%s', '%s') AS Success",
-             from_folder_id, to_folder_id);
-
-    if (mysql_query(conn, query)) {
-        printf("Move folder failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    MYSQL_ROW row = mysql_fetch_row(result);
-    bool success = (row && row[0] && row[0][0] == '1');
-
-    mysql_free_result(result);
-    db_disconnect(conn);
-    return success;
-}
-
-bool db_rename_folder(const char* folder_id, const char* new_name) {
-    MYSQL *conn = db_connect();
-    if (!conn) return false;
-
-    char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT RenameFolder('%s', '%s') AS Success",
-             folder_id, new_name);
-
-    if (mysql_query(conn, query)) {
-        printf("Rename folder failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    MYSQL_ROW row = mysql_fetch_row(result);
-    bool success = (row && row[0] && row[0][0] == '1');
-
-    mysql_free_result(result);
-    db_disconnect(conn);
-    return success;
-}
-
-char* db_get_folder_id(const char* folder_name, const char* user_name) {
-    MYSQL *conn = db_connect();
-    if (!conn) return NULL;
-
-    char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT GetFolderID('%s', '%s') AS folder_id",
-             folder_name, user_name);
-
-    if (mysql_query(conn, query)) {
-        printf("Get folder ID failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return NULL;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    MYSQL_ROW row = mysql_fetch_row(result);
-    char* folder_id = row && row[0] ? strdup(row[0]) : NULL;
-
-    mysql_free_result(result);
-    db_disconnect(conn);
-    return folder_id;
-}
-
-char* db_get_parent_folder_id(const char* folder_name, const char* user_name) {
-    MYSQL *conn = db_connect();
-    if (!conn) return NULL;
-
-    char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT GetParentFolderID('%s', '%s') AS parent_id",
-             folder_name, user_name);
-
-    if (mysql_query(conn, query)) {
-        printf("Get parent folder ID failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return NULL;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    MYSQL_ROW row = mysql_fetch_row(result);
-    char* parent_id = row && row[0] ? strdup(row[0]) : NULL;
-
-    mysql_free_result(result);
-    db_disconnect(conn);
-    return parent_id;
-}
-
-bool db_delete_folder(const char* folder_name, const char* user_name) {
-    MYSQL *conn = db_connect();
-    if (!conn) return false;
-
-    // Get folder ID first
-    char* folder_id = db_get_folder_id(folder_name, user_name);
-    if (!folder_id) return false;
-
-    char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT DeleteFolder('%s') AS Success",
-             folder_id);
-
-    if (mysql_query(conn, query)) {
-        printf("Delete folder failed: %s\n", mysql_error(conn));
-        free(folder_id);
-        db_disconnect(conn);
-        return false;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    MYSQL_ROW row = mysql_fetch_row(result);
-    bool success = (row && row[0] && row[0][0] == '1');
-
-    free(folder_id);
-    mysql_free_result(result);
-    db_disconnect(conn);
-    return success;
-}
-
-FileSearchList* db_search_file(const char* file_name) {
-    MYSQL *conn = db_connect();
-    if (!conn) return NULL;
-
-    char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT fileID, folderID, fileName, fileSize, folderName, createBy, access "
-             "FROM SearchFile('%s')", file_name);
-
-    if (mysql_query(conn, query)) {
-        printf("Search file failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return NULL;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    if (!result) {
-        db_disconnect(conn);
-        return NULL;
-    }
-
-    FileSearchList* list = malloc(sizeof(FileSearchList));
-    list->count = mysql_num_rows(result);
-    list->results = malloc(list->count * sizeof(FileSearchResult));
-
-    MYSQL_ROW row;
-    int i = 0;
-    while ((row = mysql_fetch_row(result))) {
-        list->results[i].file_id = strdup(row[0]);
-        list->results[i].folder_id = strdup(row[1]);
-        list->results[i].file_name = strdup(row[2]);
-        list->results[i].file_size = atol(row[3]);
-        list->results[i].folder_name = strdup(row[4]);
-        list->results[i].created_by = strdup(row[5]);
-        list->results[i].access = strdup(row[6]);
-        i++;
-    }
-
-    mysql_free_result(result);
-    db_disconnect(conn);
-    return list;
-}
-
-void file_search_list_destroy(FileSearchList* list) {
-    if (!list) return;
-    
-    for (int i = 0; i < list->count; i++) {
-        free(list->results[i].file_id);
-        free(list->results[i].folder_id);
-        free(list->results[i].file_name);
-        free(list->results[i].folder_name);
-        free(list->results[i].created_by);
-        free(list->results[i].access);
-    }
-    free(list->results);
-    free(list);
-}
-
-// Similar implementations for other database functions...

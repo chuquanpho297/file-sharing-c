@@ -14,4 +14,33 @@ typedef struct
     int is_logged_in;
 } client_t;
 
+typedef struct {
+    char* file_id;
+    char* folder_id;
+    char* file_name;
+    long file_size;
+    char* folder_name;
+    char* created_by;
+    char* access;
+} FileStruct;
+
+typedef struct {
+    FileStruct* files;
+    int count;
+} FileList;
+
+typedef struct {
+    char* folder_id;
+    char* folder_name;
+    char* created_by;
+    char* parent_folder_id;
+    char* created_at;
+    char* access;
+} FolderStruct;
+
+typedef struct {
+    FolderStruct* folders;
+    int count;
+} FolderList;
+
 #endif

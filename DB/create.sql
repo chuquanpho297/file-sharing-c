@@ -1,3 +1,5 @@
+DELIMITER //
+
 DROP DATABASE IF EXISTS file_sharing;
 CREATE DATABASE file_sharing;
 USE file_sharing;
@@ -15,6 +17,7 @@ CREATE TABLE `Folder` (
     `createBy` VARCHAR(255) NOT NULL,
     `createAt` TIMESTAMP NOT NULL,
     `access` ENUM('private', 'view', 'download') DEFAULT 'private',
+    `isRoot` BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (`folderID`),
     CONSTRAINT `createBy` FOREIGN KEY (`createBy`) REFERENCES `Users`(`userName`),
     CONSTRAINT `parentFolderID` FOREIGN KEY (`parentFolderID`) REFERENCES `Folder`(`folderID`)
@@ -34,30 +37,22 @@ CREATE FUNCTION HashPasswordWithUserName(userName VARCHAR(255), userPassword VAR
 RETURNS VARBINARY(64) DETERMINISTIC
 BEGIN
     RETURN UNHEX(SHA2(CONCAT(userPassword, HEX(SHA2(userName, 256))), 256));
-END;
+END //
 
 CREATE FUNCTION InsertNewUser(pUserName VARCHAR(255), userPassword VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
     DECLARE userExists INT;
-
-    -- Check if the username already exists
-    SELECT COUNT(*) INTO userExists
-    FROM Users
-    WHERE userName = pUserName;
-
+    SELECT COUNT(*) INTO userExists FROM Users WHERE userName = pUserName;
+    
     IF userExists > 0 THEN
-        -- Username already exists, return NULL to indicate failure
         RETURN FALSE;
     ELSE
-        -- Username doesn't exist, proceed to insert the new user
         INSERT INTO Users (userName, passwordHash)
         VALUES (pUserName, HEX(HashPasswordWithUserName(pUserName, userPassword)));
-
-        -- Return TRUE to indicate successful insertion
         RETURN TRUE;
     END IF;
-END
+END //
 
 CREATE FUNCTION Login(userName VARCHAR(255), userPassword VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -75,7 +70,7 @@ BEGIN
     ELSE
         RETURN FALSE; -- Invalid credentials, return FALSE
     END IF;
-END
+END //
 
 CREATE FUNCTION CreateFolder(folder_name VARCHAR(255), parent_folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -102,30 +97,48 @@ BEGIN
 
         RETURN TRUE; -- Return TRUE for successful folder creation
     END IF;
-END
+END //
 
-CREATE FUNCTION GetFolderID(folder_name VARCHAR(255), user_name VARCHAR(255))
+CREATE FUNCTION CreateRootFolder(folder_name VARCHAR(255), user_name VARCHAR(255))
+RETURNS BOOLEAN DETERMINISTIC
+BEGIN
+    INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createAt, isRoot)
+    VALUES (UUID(), folder_name, NULL, user_name, NOW(), TRUE);
+    RETURN TRUE;
+END //
+
+CREATE FUNCTION GetRootFolderID(user_name VARCHAR(255))
+RETURNS VARCHAR(255) DETERMINISTIC
+BEGIN
+    DECLARE root_folder_id VARCHAR(255);
+    SELECT folderID INTO root_folder_id
+    FROM Folder
+    WHERE createBy = user_name AND isRoot = TRUE;
+    RETURN root_folder_id;
+END //
+
+CREATE FUNCTION GetFolderID(folder_name VARCHAR(255), user_name VARCHAR(255), parent_folder_id VARCHAR(255))
 RETURNS VARCHAR(255) DETERMINISTIC
 BEGIN
     DECLARE folder_id VARCHAR(255);
     SELECT folderID INTO folder_id
     FROM Folder
-    WHERE folderName = folder_name AND createBy = user_name;
+    WHERE folderName = folder_name AND createBy = user_name AND parentFolderID = parent_folder_id;
     RETURN folder_id;
-END
+END //
 
-CREATE FUNCTION GetParentFolderID(folder_name VARCHAR(255), user_name VARCHAR(255))
-RETURNS VARCHAR(255) DETERMINISTIC
-BEGIN
-    DECLARE parent_folder_id VARCHAR(255);
-    SELECT parentFolderID INTO parent_folder_id
-    FROM Folder
-    WHERE folderName = folder_name AND createBy = user_name;
-    RETURN parent_folder_id;
-END
+-- CREATE FUNCTION GetParentFolderID(folder_name VARCHAR(255), user_name VARCHAR(255))
+-- RETURNS VARCHAR(255) DETERMINISTIC
+-- BEGIN
+--     DECLARE parent_folder_id VARCHAR(255);
+--     SELECT parentFolderID INTO parent_folder_id
+--     FROM Folder
+--     WHERE folderName = folder_name AND createBy = user_name;
+--     RETURN parent_folder_id;
+-- END
 
 
-CREATE FUNCTION CopyFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
+CREATE FUNCTION CopyAllContentFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
     DECLARE new_folder_id VARCHAR(255);
@@ -189,9 +202,9 @@ BEGIN
     END;
     
     RETURN TRUE;
-END
+END //
 
-CREATE FUNCTION MoveFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
+CREATE FUNCTION MoveAllContentFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
     -- Check if folders exist
@@ -210,7 +223,7 @@ BEGIN
     ELSE
         RETURN FALSE;
     END IF;
-END
+END //
 
 CREATE FUNCTION RenameFolder(folder_id VARCHAR(255), new_name VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -235,7 +248,7 @@ BEGIN
     WHERE folderID = folder_id;
     
     RETURN TRUE;
-END
+END //
 
 CREATE FUNCTION DeleteFolder(folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -273,7 +286,7 @@ BEGIN
     DELETE FROM Folder WHERE folderID = folder_id;
     
     RETURN TRUE;
-END
+END //
 
 -- File operations
 CREATE FUNCTION CreateFile(file_name VARCHAR(255), file_size BIGINT, folder_id VARCHAR(255))
@@ -297,7 +310,7 @@ BEGIN
     VALUES (new_file_id, folder_id, file_name, file_size);
     
     RETURN new_file_id;
-END
+END //
 
 CREATE FUNCTION CopyFile(file_id VARCHAR(255), to_folder_id VARCHAR(255))
 RETURNS VARCHAR(255) DETERMINISTIC
@@ -318,7 +331,7 @@ BEGIN
     WHERE fileID = file_id;
     
     RETURN new_file_id;
-END
+END //
 
 CREATE FUNCTION MoveFile(file_id VARCHAR(255), to_folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -334,7 +347,7 @@ BEGIN
     WHERE fileID = file_id;
     
     RETURN TRUE;
-END
+END //
 
 CREATE FUNCTION RenameFile(file_id VARCHAR(255), new_name VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -359,14 +372,14 @@ BEGIN
     WHERE fileID = file_id;
     
     RETURN TRUE;
-END
+END //
 
 CREATE FUNCTION DeleteFile(file_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
     DELETE FROM File WHERE fileID = file_id;
     RETURN TRUE;
-END
+END //
 
 CREATE FUNCTION GetFileID(file_name VARCHAR(255), folder_id VARCHAR(255))
 RETURNS VARCHAR(255) DETERMINISTIC
@@ -376,7 +389,7 @@ BEGIN
     FROM File
     WHERE fName = file_name AND folderID = folder_id;
     RETURN file_id;
-END  
+END //
 
 CREATE FUNCTION GetFileAccess(file_id VARCHAR(255))
 RETURNS ENUM('private', 'view', 'download') DETERMINISTIC
@@ -386,14 +399,14 @@ BEGIN
     FROM File
     WHERE fileID = file_id;
     RETURN access;
-END
+END //
 
 CREATE FUNCTION SetFileAccess(file_id VARCHAR(255), access ENUM('private', 'view', 'download'))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
     UPDATE File SET access = access WHERE fileID = file_id;
     RETURN TRUE;
-END
+END //
 
 CREATE FUNCTION SetFolderAccess(folder_id VARCHAR(255), access ENUM('private', 'view', 'download'))
 RETURNS BOOLEAN DETERMINISTIC
@@ -401,7 +414,7 @@ BEGIN
     UPDATE Folder SET access = access WHERE folderID = folder_id;
     UPDATE File SET access = access WHERE folderID = folder_id;
     RETURN TRUE;
-END
+END //
 
 CREATE FUNCTION GetFolderAccess(folder_id VARCHAR(255))
 RETURNS ENUM('private', 'view', 'download') DETERMINISTIC
@@ -411,7 +424,7 @@ BEGIN
     FROM Folder
     WHERE folderID = folder_id;
     RETURN access;
-END
+END //
 
 CREATE PROCEDURE SearchFile(IN file_name VARCHAR(255))
 BEGIN
@@ -426,7 +439,7 @@ BEGIN
     FROM File f
     JOIN Folder fo ON f.folderID = fo.folderID
     WHERE f.fName LIKE CONCAT('%', file_name, '%') AND (f.access = 'view' OR f.access = 'download');
-END
+END //
 
 CREATE PROCEDURE SearchFolder(IN folder_name VARCHAR(255))
 BEGIN
@@ -437,5 +450,54 @@ BEGIN
         access
     FROM Folder
     WHERE folderName LIKE CONCAT('%', folder_name, '%') AND (access = 'view' OR access = 'download');
-END
+END //
 
+
+CREATE FUNCTION CheckFolderExist(folder_name VARCHAR(255), user_name VARCHAR(255), parent_folder_id VARCHAR(255))
+RETURNS BOOLEAN DETERMINISTIC
+BEGIN
+    DECLARE folder_exists INT;
+    SELECT COUNT(*) INTO folder_exists
+    FROM Folder
+    WHERE folderName = folder_name AND createBy = user_name AND parentFolderID = parent_folder_id;
+    RETURN folder_exists > 0;
+END //
+
+CREATE FUNCTION CheckFileExist(file_name VARCHAR(255), user_name VARCHAR(255), parent_folder_id VARCHAR(255))
+RETURNS BOOLEAN DETERMINISTIC
+BEGIN
+    DECLARE file_exists INT;
+    SELECT COUNT(*) INTO file_exists
+    FROM File
+    WHERE fName = file_name AND createBy = user_name AND folderID = parent_folder_id;
+    RETURN file_exists > 0;
+END //
+
+CREATE PROCEDURE GetAllFileInFolder(folder_id VARCHAR(255))
+BEGIN
+    SELECT * FROM File WHERE folderID = folder_id;
+END //
+
+CREATE PROCEDURE GetAllFolderInFolder(folder_id VARCHAR(255))
+BEGIN
+    SELECT * FROM Folder WHERE parentFolderID = folder_id;
+END //
+
+CREATE FUNCTION CopyFolder(folder_id VARCHAR(255), parent_folder_id VARCHAR(255), user_name VARCHAR(255))
+RETURNS BOOLEAN DETERMINISTIC
+BEGIN
+    INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createAt)
+    SELECT UUID(), folderName, parent_folder_id, user_name, NOW()
+    FROM Folder
+    WHERE folderID = folder_id;
+    RETURN TRUE;
+END //
+
+CREATE FUNCTION MoveFolder(folder_id VARCHAR(255), parent_folder_id VARCHAR(255), user_name VARCHAR(255))
+RETURNS BOOLEAN DETERMINISTIC
+BEGIN
+    UPDATE Folder SET parentFolderID = parent_folder_id WHERE folderID = folder_id;
+    RETURN TRUE;
+END //
+
+DELIMITER ;
