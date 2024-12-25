@@ -16,6 +16,7 @@
 #define MAX_PASSWORD 32
 #define MAX_FOLDER_NAME 32
 #define MAX_PATH_LENGTH 1024
+#define PATH_MAX 4096
 
 // Function prototypes
 void print_usage(void);
@@ -56,6 +57,7 @@ void handle_file_move(int sock, const char *file_path, const char *to_folder,
                       struct json_object *j);
 void handle_file_delete(int sock, const char *file_path, struct json_object *j);
 void handle_logout(int sock, int *is_logged_in, char *current_user);
+void handle_file_search(int sock, const char *search_term, struct json_object *j);
 const char *get_filename(const char *path);
 
 int main()
@@ -113,7 +115,7 @@ int main()
         {
             if (is_logged_in)
             {
-                handle_logout(sock, &is_logged_in, &current_user);
+                handle_logout(sock, &is_logged_in, current_user);
             }
             else
             {
@@ -186,11 +188,23 @@ int main()
                 continue;
             }
 
-            char folder_path[MAX_PATH_LENGTH];
+            char *folder_path = NULL;
             char folder_name[MAX_FOLDER_NAME];
+            char temp_buffer[MAX_PATH_LENGTH];
+
             printf("Enter folder path: ");
-            scanf("%s", folder_path);
-            getchar(); // Consume newline
+            if (fgets(temp_buffer, MAX_PATH_LENGTH, stdin) != NULL)
+            {
+                // Remove trailing newline if present
+                temp_buffer[strcspn(temp_buffer, "\n")] = 0;
+
+                // If input is not empty, allocate and copy
+                if (strlen(temp_buffer) > 0)
+                {
+                    folder_path = strdup(temp_buffer);
+                }
+            }
+            // getchar(); // Consume newline
             printf("Enter folder name: ");
             scanf("%s", folder_name);
             getchar(); // Consume newline
@@ -589,7 +603,7 @@ void handle_logout(int sock, int *is_logged_in, char *current_user)
 
     handle_print_payload_response(buffer, print_message_oneline);
 
-    is_logged_in = 0;
+    *is_logged_in = 0;
     strcpy(current_user, "");
 }
 
@@ -660,9 +674,12 @@ void handle_folder_create(int sock, const char *folder_path,
                           const char *folder_name, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
-
-    json_object_object_add(jpayload, "folderPath",
-                           json_object_new_string(folder_path));
+    if (folder_path != NULL)
+        json_object_object_add(jpayload, "folderPath",
+                               json_object_new_string(folder_path));
+    else
+        json_object_object_add(jpayload, "folderPath",
+                               json_object_new_string(""));
     json_object_object_add(jpayload, "folderName",
                            json_object_new_string(folder_name));
     json_object_object_add(jobj, "messageType",
@@ -971,8 +988,8 @@ void handle_file_download(int sock, const char *file_path,
                 mkdir(path, 0777);
             }
 
-            char des_path[MAX_PATH_LENGTH];
-            char *file_name = get_filename(file_path);
+            char des_path[PATH_MAX];
+            const char *file_name = get_filename(file_path);
             snprintf(des_path, sizeof(des_path), "%s/%s", path, file_name);
 
             FILE *f = fopen(des_path, "wb");

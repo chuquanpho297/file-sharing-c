@@ -74,7 +74,7 @@ BEGIN
     END IF;
 END //
 
-CREATE FUNCTION CreateFolder(folder_name VARCHAR(255), parent_folder_id VARCHAR(255))
+CREATE FUNCTION CreateFolder(folder_name VARCHAR(255), parent_folder_id VARCHAR(255), user_name VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
     DECLARE folder_id VARCHAR(255);

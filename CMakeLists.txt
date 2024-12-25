@@ -23,3 +23,10 @@ add_executable(server
     src/utils/structs.c
 )
 add_executable(client src/client.c src/utils/client_utils.c)
+
+# Add include directories
+include_directories(${JSONC_INCLUDE_DIRS})
+
+# Update link libraries
+target_link_libraries(server ${JSONC_LIBRARIES} mysqlclient pthread)
+target_link_libraries(client ${JSONC_LIBRARIES} pthread)
