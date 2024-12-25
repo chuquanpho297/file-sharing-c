@@ -51,7 +51,25 @@ void handle_register(client_t *client, const char *buffer)
         strncpy(client->username, username, MAX_USERNAME - 1);
         client->is_logged_in = 1;
         send_response(client->socket, 201, "Registration successful");
-        db_create_root_folder(client->username);
+        char path[1024];
+        snprintf(path, sizeof(path), "root/%s", client->username);
+
+        struct stat st = {0};
+        if (stat(path, &st) == 0)
+        {
+            send_response(client->socket, 409, "Folder already exists");
+        }
+        else
+        {
+            if (mkdir(path, 0777) == 0)
+            {
+                db_create_root_folder(client->username);
+            }
+            else
+            {
+                send_response(client->socket, 501, "Failed to create folder");
+            }
+        }
     }
     else
     {

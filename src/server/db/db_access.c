@@ -737,12 +737,13 @@ bool db_check_file_exist(const char *file_name, const char *user_name,
 
     char query[512];
     snprintf(query, sizeof(query),
-             "SELECT CheckFileExist('%s', '%s', '%s') AS Exists", file_name,
+             "SELECT CheckFileExists('%s', '%s', '%s') AS result", file_name,
              user_name, parent_folder_id);
 
     if (mysql_query(conn, query))
     {
         printf("Check file failed: %s\n", mysql_error(conn));
+        printf("Query: %s\n", query);
         db_disconnect(conn);
         return false;
     }
@@ -751,6 +752,7 @@ bool db_check_file_exist(const char *file_name, const char *user_name,
     if (!result)
     {
         printf("Check file failed: %s\n", mysql_error(conn));
+        printf("result: %s\n", result);
         db_disconnect(conn);
         return false;
     }
