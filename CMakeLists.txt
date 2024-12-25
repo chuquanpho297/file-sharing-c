@@ -13,11 +13,13 @@ link_libraries(${JSONC_LIBRARIES} mysqlclient)
 
 # Create executables
 add_executable(server
-    src/server/models/user_model.c
     src/server/db/db_access.c
-    src/server/controllers/file_controller.c
-    src/server/controllers/user_controller.c
-    src/server/file_handler.c
+    src/server/system/system_access.c
     src/server/server.c
+    src/server/handler/file_handler.c
+    src/server/handler/folder_handler.c
+    src/server/handler/user_handler.c
+    src/utils/helper.c
+    src/utils/structs.c
 )
 add_executable(client src/client.c src/utils/client_utils.c)

@@ -2,7 +2,8 @@
 #define FOLDER_HANDLER_H
 
 #include <json-c/json.h>
-#include "../utils/structs.h"
+
+#include "../../utils/structs.h"
 
 // Folder operations handlers
 void handle_root_folder_create(const char *username);
@@ -23,4 +24,4 @@ void handle_folder_get_access(client_t *client, const char *buffer);
 void handle_folder_search(client_t *client, const char *buffer);
 void handle_root_folder_get(client_t *client, const char *buffer);
 
-#endif // FOLDER_HANDLER_H
+#endif  // FOLDER_HANDLER_H

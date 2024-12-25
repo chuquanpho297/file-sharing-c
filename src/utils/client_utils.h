@@ -2,7 +2,8 @@
 
 typedef void (*PrintPayloadResponseFunc)(int, struct json_object *);
 
-void handle_print_payload_response(char *buffer, PrintPayloadResponseFunc print_func);
+void handle_print_payload_response(char *buffer,
+                                   PrintPayloadResponseFunc print_func);
 
 void print_message_oneline(int response_code, struct json_object *payload);
 

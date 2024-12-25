@@ -1,8 +1,11 @@
-#include <stdio.h>
+#include "client_utils.h"
+#include <arpa/inet.h>
 #include <json-c/json.h>
-#include "./client_utils.h"
+#include <stdio.h>
+#include <string.h>
 
-void handle_print_payload_response(char *buffer, PrintPayloadResponseFunc print_func)
+void handle_print_payload_response(char *buffer,
+                                   PrintPayloadResponseFunc print_func)
 {
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -12,7 +15,7 @@ void handle_print_payload_response(char *buffer, PrintPayloadResponseFunc print_
     json_object_object_get_ex(parsed_json, "responseCode", &response_code);
     json_object_object_get_ex(parsed_json, "payload", &payload);
     int response_code_int = json_object_get_int(response_code);
-    print_func(response_code, payload);
+    print_func(response_code_int, payload);
 
     json_object_put(parsed_json); // Free the JSON object
 }
