@@ -11,6 +11,8 @@
 #include "../utils/structs.h"
 #include "db/db_access.h"
 #include "file_handler.h"
+#include "folder_handler.h"
+#include "../utils/helper.h"
 
 // Database credentials
 const char *host = DB_HOST;
@@ -19,36 +21,10 @@ const char *password = DB_PASS;
 const char *db_name = DB_NAME;
 const unsigned int port = DB_PORT;
 
-typedef struct
-{
-    char username[MAX_USERNAME];
-    char password[MAX_PASSWORD];
-} user_t;
-
 pthread_mutex_t users_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Function prototypes
 void *handle_client(void *arg);
-void handle_login(client_t *client, const char *buffer);
-void handle_register(client_t *client, const char *buffer);
-void send_response(int socket, int code, const char *message);
-void handle_create_group(client_t *client, const char *buffer);
-void handle_list_all_groups(client_t *client, const char *buffer);
-void handle_join_group(client_t *client, const char *buffer);
-void handle_invite_to_group(client_t *client, const char *buffer);
-void handle_leave_group(client_t *client, const char *buffer);
-void handle_list_group_members(client_t *client, const char *buffer);
-void handle_list_invitations(client_t *client, const char *buffer);
-void handle_remove_member(client_t *client, const char *buffer);
-void handle_approval(client_t *client, const char *buffer);
-void handle_join_request_status(client_t *client, const char *buffer);
-void handle_join_request_list(client_t *client, const char *buffer);
-void handle_folder_content(client_t *client, const char *buffer);
-void handle_create_folder(client_t *client, const char *buffer);
-void handle_folder_rename(client_t *client, const char *buffer);
-void handle_folder_copy(client_t *client, const char *buffer);
-void handle_folder_move(client_t *client, const char *buffer);
-void handle_folder_delete(client_t *client, const char *buffer);
 
 int main()
 {
@@ -107,9 +83,6 @@ int main()
             continue;
         }
 
-        // Send connection success response
-        // send_response(client->socket, 200, "Connected to server");
-
         // Create new thread for client
         if (pthread_create(&tid[client_count++], NULL, handle_client, (void *)client) != 0)
         {
@@ -137,9 +110,6 @@ void *handle_client(void *arg)
     char buffer[BUFFER_SIZE];
     int read_size;
 
-    // Send initial connection response
-    // send_response(client->socket, 200, "Connected to server");
-
     while ((read_size = recv(client->socket, buffer, BUFFER_SIZE, 0)) > 0)
     {
         buffer[read_size] = '\0';
@@ -152,69 +122,95 @@ void *handle_client(void *arg)
 
         printf("Request from client: %s\n", buffer);
 
-        if (strcmp(type, "EXIT") == 0)
+        if (!client->is_logged_in)
         {
-            printf("Client disconnected\n");
-            break;
+            if (strcmp(type, "LOGIN") == 0)
+            {
+                handle_login(client, buffer);
+            }
+            else if (strcmp(type, "REGISTER") == 0)
+            {
+                handle_register(client, buffer);
+            }
+            else
+                send_response(client->socket, 401, "Unauthorized");
         }
-        // Folder operations
-        else if (strcmp(type, "FOLDER_CONTENT") == 0)
+        else
         {
-            handle_folder_content(client, buffer);
-        }
-        else if (strcmp(type, "CREATE_FOLDER") == 0)
-        {
-            handle_create_folder(client, buffer);
-        }
-        else if (strcmp(type, "FOLDER_RENAME") == 0)
-        {
-            handle_folder_rename(client, buffer);
-        }
-        else if (strcmp(type, "FOLDER_COPY") == 0)
-        {
-            handle_folder_copy(client, buffer);
-        }
-        else if (strcmp(type, "FOLDER_MOVE") == 0)
-        {
-            handle_folder_move(client, buffer);
-        }
-        else if (strcmp(type, "FOLDER_DELETE") == 0)
-        {
-            handle_folder_delete(client, buffer);
-        }
-        // File operations
-        else if (strcmp(type, "UPLOAD_FILE") == 0)
-        {
-            handle_upload_file(client, buffer);
-        }
-        else if (strcmp(type, "DOWNLOAD_FILE") == 0)
-        {
-            handle_download_file(client, buffer);
-        }
-        else if (strcmp(type, "FILE_RENAME") == 0)
-        {
-            handle_file_rename(client, buffer);
-        }
-        else if (strcmp(type, "FILE_COPY") == 0)
-        {
-            handle_file_copy(client, buffer);
-        }
-        else if (strcmp(type, "FILE_MOVE") == 0)
-        {
-            handle_file_move(client, buffer);
-        }
-        else if (strcmp(type, "FILE_DELETE") == 0)
-        {
-            handle_file_delete(client, buffer);
-        }
-        // User operations
-        else if (strcmp(type, "LOGIN") == 0)
-        {
-            handle_login(client, buffer);
-        }
-        else if (strcmp(type, "REGISTER") == 0)
-        {
-            handle_register(client, buffer);
+            // Folder operations
+            // TODO: Add FOLDER_CONTENT handler
+            if (strcmp(type, "FOLDER_CREATE") == 0)
+            {
+                handle_folder_create(client, buffer);
+            }
+            else if (strcmp(type, "FOLDER_RENAME") == 0)
+            {
+                handle_folder_rename(client, buffer);
+            }
+            else if (strcmp(type, "FOLDER_COPY") == 0)
+            {
+                handle_folder_copy(client, buffer);
+            }
+            else if (strcmp(type, "FOLDER_MOVE") == 0)
+            {
+                handle_folder_move(client, buffer);
+            }
+            else if (strcmp(type, "FOLDER_DELETE") == 0)
+            {
+                handle_folder_delete(client, buffer);
+            }
+            else if (strcmp(type, "FOLDER_SEARCH") == 0)
+            {
+                handle_folder_search(client, buffer);
+            }
+            else if (strcmp(type, "FOLDER_DOWNLOAD") == 0)
+            {
+                handle_folder_download(client, buffer);
+            }
+            else if (strcmp(type, "FOLDER_UPLOAD") == 0)
+            {
+                handle_folder_upload(client, buffer);
+            }
+            // File operations
+            // TODO: missing add upload file handler
+            else if (strcmp(type, "FILE_UPLOAD") == 0)
+            {
+                handle_upload_file(client, buffer);
+            }
+            else if (strcmp(type, "FILE_DOWNLOAD") == 0)
+            {
+                handle_file_download(client, buffer);
+            }
+            else if (strcmp(type, "FILE_RENAME") == 0)
+            {
+                handle_file_rename(client, buffer);
+            }
+            else if (strcmp(type, "FILE_COPY") == 0)
+            {
+                handle_file_copy(client, buffer);
+            }
+            else if (strcmp(type, "FILE_MOVE") == 0)
+            {
+                handle_file_move(client, buffer);
+            }
+            else if (strcmp(type, "FILE_DELETE") == 0)
+            {
+                handle_file_delete(client, buffer);
+            }
+            else if (strcmp(type, "FILE_SEARCH") == 0)
+            {
+                handle_file_search(client, buffer);
+            }
+            else if (strcmp(type, "LOGOUT") == 0)
+            {
+                client->is_logged_in = 0;
+                client->username[0] = '\0';
+                send_response(client->socket, 200, "Logged out");
+            }
+            else
+            {
+                send_response(client->socket, 404, "Invalid request");
+            }
         }
 
         json_object_put(parsed_json);
@@ -283,11 +279,4 @@ void handle_register(client_t *client, const char *buffer)
     pthread_mutex_unlock(&users_mutex);
 
     json_object_put(parsed_json);
-}
-
-void send_response(int socket, int code, const char *message)
-{
-    char response[BUFFER_SIZE];
-    snprintf(response, BUFFER_SIZE, "{\"responseCode\": %d, \"message\": \"%s\"}", code, message);
-    send(socket, response, strlen(response), 0);
 }

@@ -20,4 +20,4 @@ add_executable(server
     src/server/file_handler.c
     src/server/server.c
 )
-add_executable(client src/client.c)
+add_executable(client src/client.c src/utils/client_utils.c)

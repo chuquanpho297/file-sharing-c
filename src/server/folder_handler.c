@@ -7,13 +7,6 @@
 #include <unistd.h>
 #include <dirent.h>
 
-static void send_response(int socket, int code, const char *message)
-{
-    char response[BUFFER_SIZE];
-    snprintf(response, BUFFER_SIZE, "{\"responseCode\": %d, \"message\": \"%s\"}", code, message);
-    send(socket, response, strlen(response), 0);
-}
-
 void handle_folder_content(client_t *client, const char *buffer)
 {
     struct json_object *parsed_json = json_tokener_parse(buffer);
@@ -76,7 +69,7 @@ void handle_folder_content(client_t *client, const char *buffer)
     // TODO: Add functions to free these lists
 }
 
-void handle_create_folder(client_t *client, const char *buffer)
+void handle_folder_create(client_t *client, const char *buffer)
 {
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *folder_name_obj, *folder_path_obj;
@@ -116,7 +109,7 @@ void handle_create_folder(client_t *client, const char *buffer)
     json_object_put(parsed_json);
 }
 
-void handle_upload_folder(client_t *client, const char *buffer)
+void handle_folder_upload(client_t *client, const char *buffer)
 {
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *folder_path_obj, *folder_name_obj;
@@ -162,7 +155,7 @@ void handle_upload_folder(client_t *client, const char *buffer)
     json_object_put(parsed_json);
 }
 
-void handle_download_folder(client_t *client, const char *buffer)
+void handle_folder_download(client_t *client, const char *buffer)
 {
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *folder_path_obj, *folder_owner_obj;
@@ -171,18 +164,21 @@ void handle_download_folder(client_t *client, const char *buffer)
     json_object_object_get_ex(payload, "folderPath", &folder_path_obj);
     json_object_object_get_ex(payload, "folderOwner", &folder_owner_obj);
 
-    char* folder_path = json_object_get_string(folder_path_obj);
-    char* folder_owner = json_object_get_string(folder_owner_obj);
-    if(folder_owner == NULL){
+    char *folder_path = json_object_get_string(folder_path_obj);
+    char *folder_owner = json_object_get_string(folder_owner_obj);
+    if (folder_owner == NULL)
+    {
         folder_owner = client->username;
     }
-    char* token = strtok(folder_path, "/");
-    char* parent_folder = NULL;
-    char* folder_id = get_root_folder_id_handler(folder_owner);
-    while (token != NULL) {
+    char *token = strtok(folder_path, "/");
+    char *parent_folder = NULL;
+    char *folder_id = get_root_folder_id_handler(folder_owner);
+    while (token != NULL)
+    {
         parent_folder = token;
         folder_id = get_folder_id_handler(parent_folder, client->username, folder_id);
-        if(folder_id == NULL){
+        if (folder_id == NULL)
+        {
             send_response(client->socket, 500, "Failed to download folder");
             json_object_put(parsed_json);
             return;
@@ -190,12 +186,8 @@ void handle_download_folder(client_t *client, const char *buffer)
         token = strtok(NULL, "/");
     }
 
-
-
-
     // download_folder_handler(folder_path, folder_owner);
 }
-
 
 void handle_folder_rename(client_t *client, const char *buffer)
 {
@@ -459,12 +451,12 @@ void handle_folder_get_access(client_t *client, const char *buffer)
     json_object_put(parsed_json);
 }
 
-void handle_create_root_folder(const char *username)
+void handle_root_folder_create(const char *username)
 {
     create_root_folder_handler(username, username);
 }
 
-void handle_get_root_folder(client_t *client, const char *buffer)
+void handle_root_folder_get(client_t *client, const char *buffer)
 {
     char *root_folder_id = get_root_folder_id_handler(client->username);
 
@@ -489,7 +481,7 @@ void handle_get_root_folder(client_t *client, const char *buffer)
     }
 }
 
-void handle_search_folders(client_t *client, const char *buffer)
+void handle_folder_search(client_t *client, const char *buffer)
 {
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *search_term_obj;

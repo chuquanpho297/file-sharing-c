@@ -5,23 +5,22 @@
 #include "../utils/structs.h"
 
 // Folder operations handlers
-void handle_create_root_folder(const char* username);
-void handle_create_folder(client_t* client, const char* buffer);
-void handle_upload_folder(client_t* client, const char* buffer);
-void handle_download_folder(client_t* client, const char* buffer);
-void handle_folder_rename(client_t* client, const char* buffer);
-void handle_folder_copy(client_t* client, const char* buffer);
-void handle_folder_move(client_t* client, const char* buffer);
-void handle_folder_delete(client_t* client, const char* buffer);
-void handle_folder_content(client_t* client, const char* buffer);
+void handle_root_folder_create(const char *username);
+void handle_folder_create(client_t *client, const char *buffer);
+void handle_folder_upload(client_t *client, const char *buffer);
+void handle_folder_download(client_t *client, const char *buffer);
+void handle_folder_rename(client_t *client, const char *buffer);
+void handle_folder_copy(client_t *client, const char *buffer);
+void handle_folder_move(client_t *client, const char *buffer);
+void handle_folder_delete(client_t *client, const char *buffer);
+void handle_folder_content(client_t *client, const char *buffer);
 
 // Access control handlers
-void handle_folder_set_access(client_t* client, const char* buffer);
-void handle_folder_get_access(client_t* client, const char* buffer);
+void handle_folder_set_access(client_t *client, const char *buffer);
+void handle_folder_get_access(client_t *client, const char *buffer);
 
 // Search handlers
-void handle_search_folders(client_t* client, const char* buffer);
-void handle_get_root_folder(client_t* client, const char* buffer);
+void handle_folder_search(client_t *client, const char *buffer);
+void handle_root_folder_get(client_t *client, const char *buffer);
 
-
-#endif // FOLDER_HANDLER_H 
+#endif // FOLDER_HANDLER_H
