@@ -6,6 +6,7 @@
 
 // File operations handlers
 void handle_create_file(client_t* client, const char* buffer);
+void handle_download_file(client_t* client, const char* buffer);
 void handle_copy_file(client_t* client, const char* buffer);
 void handle_move_file(client_t* client, const char* buffer);
 void handle_rename_file(client_t* client, const char* buffer);

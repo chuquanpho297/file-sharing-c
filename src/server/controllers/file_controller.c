@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool create_file(const char* file_name, long file_size, const char* folder_id) {
-    return db_create_file(file_name, file_size, folder_id);
+bool create_file(const char* file_name, long file_size, const char* folder_id, const char* user_name) {
+    return db_create_file(file_name, file_size, folder_id, user_name);
 }
 
 bool copy_file(const char* file_id, const char* to_folder_id) {
@@ -41,5 +41,9 @@ FileList* search_files(const char* file_name) {
 
 bool check_file_exists(const char* file_name, const char* user_name, const char* parent_folder_id) {
     return db_check_file_exist(file_name, user_name, parent_folder_id);
+}
+
+char* get_file_id(const char* file_name, const char* parent_folder_id) {
+    return db_get_file_id(file_name, parent_folder_id);
 }
 

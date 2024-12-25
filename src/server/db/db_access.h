@@ -28,7 +28,7 @@ bool db_delete_folder(const char* folder_id);
 bool db_rename_folder(const char* folder_id, const char* new_name);
 
 // File operations
-bool db_create_file(const char* file_name, long file_size, const char* folder_id);
+bool db_create_file(const char* file_name, long file_size, const char* folder_id, const char* user_name);
 bool db_copy_file(const char* file_id, const char* to_folder_id);
 bool db_move_file(const char* file_id, const char* to_folder_id);
 bool db_rename_file(const char* file_id, const char* new_name);
@@ -47,6 +47,9 @@ bool db_set_file_access(const char* file_id, const char* access);
 bool db_set_folder_access(const char* folder_id, const char* access);
 char* db_get_file_access(const char* file_id);
 char* db_get_folder_access(const char* folder_id);
+
+// Add to existing functions
+char* db_get_file_id(const char* file_name, const char* parent_folder_id);
 
 
 

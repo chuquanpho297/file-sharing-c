@@ -21,6 +21,7 @@ typedef struct {
     long file_size;
     char* folder_name;
     char* created_by;
+    char* created_at;
     char* access;
 } FileStruct;
 

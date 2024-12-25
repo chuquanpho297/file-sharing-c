@@ -13,7 +13,8 @@ bool copy_folder_handler(const char* folder_id, const char* parent_folder_id, co
 bool move_folder_handler(const char* folder_id, const char* parent_folder_id, const char* user_name);
 bool rename_folder_handler(const char* folder_id, const char* new_name);
 bool delete_folder_handler(const char* folder_id);
-
+bool check_folder_exists_handler(const char* folder_name, const char* user_name, const char* parent_folder_id);
+bool copy_all_content_folder_handler(const char* from_folder_id, const char* to_folder_id);
 // Access control
 bool set_folder_access_handler(const char* folder_id, const char* access);
 char* get_folder_access_handler(const char* folder_id);
@@ -21,6 +22,5 @@ char* get_folder_access_handler(const char* folder_id);
 // Queries
 FolderList* get_all_folders_in_folder_handler(const char* folder_id);
 FolderList* search_folders_handler(const char* folder_name);
-bool check_folder_exists_handler(const char* folder_name, const char* user_name, const char* parent_folder_id);
 
 #endif // FOLDER_CONTROLLER_H 
