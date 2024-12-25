@@ -11,7 +11,6 @@
 #include "../utils/structs.h"
 #include "db/db_access.h"
 #include "file_handler.h"
-#include "group_handler.h"
 
 // Database credentials
 const char *host = DB_HOST;
@@ -158,52 +157,6 @@ void *handle_client(void *arg)
             printf("Client disconnected\n");
             break;
         }
-
-        // Group operations
-        // if (strcmp(type, "CREATE_GROUP") == 0)
-        // {
-        //     handle_create_group(client, buffer);
-        // }
-        // else if (strcmp(type, "LIST_ALL_GROUPS") == 0)
-        // {
-        //     handle_list_all_groups(client, buffer);
-        // }
-        // else if (strcmp(type, "JOIN_GROUP") == 0)
-        // {
-        //     handle_join_group(client, buffer);
-        // }
-        // else if (strcmp(type, "INVITE_TO_GROUP") == 0)
-        // {
-        //     handle_invite_to_group(client, buffer);
-        // }
-        // else if (strcmp(type, "LEAVE_GROUP") == 0)
-        // {
-        //     handle_leave_group(client, buffer);
-        // }
-        // else if (strcmp(type, "LIST_GROUP_MEMBERS") == 0)
-        // {
-        //     handle_list_group_members(client, buffer);
-        // }
-        // else if (strcmp(type, "LIST_INVITATION") == 0)
-        // {
-        //     handle_list_invitations(client, buffer);
-        // }
-        // else if (strcmp(type, "REMOVE_MEMBER") == 0)
-        // {
-        //     handle_remove_member(client, buffer);
-        // }
-        // else if (strcmp(type, "APPROVAL") == 0)
-        // {
-        //     handle_approval(client, buffer);
-        // }
-        // else if (strcmp(type, "JOIN_REQUEST_STATUS") == 0)
-        // {
-        //     handle_join_request_status(client, buffer);
-        // }
-        // else if (strcmp(type, "JOIN_REQUEST_LIST") == 0)
-        // {
-        //     handle_join_request_list(client, buffer);
-        // }
         // Folder operations
         else if (strcmp(type, "FOLDER_CONTENT") == 0)
         {

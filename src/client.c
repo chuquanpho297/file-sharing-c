@@ -12,43 +12,31 @@
 #define MAX_COMMAND_LENGTH 1024
 #define MAX_USERNAME 32
 #define MAX_PASSWORD 32
-#define MAX_GROUP_NAME 32
+#define MAX_FOLDER_NAME 32
+#define MAX_PATH_LENGTH 1024
 
 // Function prototypes
 void print_usage(void);
 void handle_login(int sock, const char *username, const char *password, int *is_logged_in, char *current_user, struct json_object *j);
 void handle_register(int sock, const char *username, const char *password, int *is_logged_in, char *current_user, struct json_object *j);
-void handle_create_group(int sock, const char *group_name, struct json_object *j);
-void handle_list_all_groups(int sock, struct json_object *j);
-void handle_join_group(int sock, const char *group_name, struct json_object *j);
-void handle_invite_to_group(int sock, const char *group_name, const char *invited_name, struct json_object *j);
-void handle_leave_group(int sock, const char *group_name, struct json_object *j);
-void handle_list_group_members(int sock, const char *group_name, struct json_object *j);
-void print_table_member(struct json_object *list_of_members_array, const char *group_name);
-void handle_list_invitations(int sock, struct json_object *jobj);
-void print_invitation_list(struct json_object *list_of_invitations);
-void handle_remove_member(int sock, const char *group_name, const char *member_name, struct json_object *j);
-void handle_approval(int sock, const char *group_name, const char *requester, const char *decision, struct json_object *j);
-void handle_join_request_status(int sock, struct json_object *j);
-void print_join_request_status(struct json_object *join_request_status_array);
-void handle_join_request_list(int sock, const char *group_name, struct json_object *j);
-void print_join_request_list(struct json_object *join_request_list_array, const char *group_name);
 void handle_folder_content(int sock, const char *group_name, const char *folder_name, struct json_object *j);
 void print_table_files(struct json_object *folder_content_array, const char *folder_name, const char *group_name);
-void handle_create_folder(int sock, const char *group_name, const char *folder_name, struct json_object *j);
-void handle_folder_rename(int sock, const char *group_name, const char *folder_name, const char *new_name, struct json_object *j);
-void handle_folder_copy(int sock, const char *from_group, const char *to_group, const char *folder_name, struct json_object *j);
-void handle_folder_move(int sock, const char *from_group, const char *to_group, const char *folder_name, struct json_object *j);
-void handle_folder_delete(int sock, const char *group_name, const char *folder_name, struct json_object *j);
-void handle_upload_file(int sock, const char *group_name, const char *folder_name, const char *file_path, struct json_object *j);
-void handle_download_file(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *j);
-void handle_file_rename(int sock, const char *group_name, const char *folder_name, const char *file_name, const char *new_name, struct json_object *j);
-void handle_file_copy(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *j);
-void handle_file_move(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *j);
-void handle_file_delete(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *j);
+void handle_create_folder(int sock, const char *folder_path, const char *folder_name, struct json_object *j);
+void handle_folder_rename(int sock, const char *folder_path, const char *new_name, struct json_object *j);
+void handle_folder_copy(int sock, const char *from_folder, const char *to_folder, struct json_object *j);
+void handle_folder_move(int sock, const char *from_folder, const char *to_folder, struct json_object *j);
+void handle_folder_delete(int sock, const char *folder_path, struct json_object *j);
+void handle_search_folders(int sock, const char *search_term, struct json_object *j);
+void handle_download_folder(int sock, const char *folder_path, const char *folder_owner, struct json_object *j);
+void handle_upload_folder(int sock, const char *folder_path, const char *folder_name, struct json_object *j);
+void handle_upload_file(int sock, const char *folder_path, const char *file_path, struct json_object *j);
+void handle_download_file(int sock, const char *file_path, const char *file_owner, struct json_object *j);
+void handle_file_rename(int sock, const char *file_path, const char *new_name, struct json_object *j);
+void handle_file_copy(int sock, const char *file_path, const char *to_folder, struct json_object *j);
+void handle_file_move(int sock, const char *file_path, const char *to_folder, struct json_object *j);
+void handle_file_delete(int sock, const char *file_path, struct json_object *j);
 void handle_exit(int sock, struct json_object *j);
-const char* get_filename(const char* path);
-void print_group_list(struct json_object *parsed_json);
+const char *get_filename(const char *path);
 
 int main()
 {
@@ -152,176 +140,22 @@ int main()
 
             handle_register(sock, username, password, &is_logged_in, current_user, jobj);
         }
-        else if (strcmp(command, "CREATE_GROUP") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("You do not have permission to create a group. Please log in.\n");
-                continue;
-            }
+        // else if (strcmp(command, "FOLDER_CONTENT") == 0)
+        // {
+        //     if (!is_logged_in)
+        //     {
+        //         printf("You do not have permission to see folder content. Please log in.\n");
+        //         continue;
+        //     }
 
-            char group_name[MAX_GROUP_NAME];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
+        //     char folder_name[MAX_FOLDER_NAME];
+        //     getchar(); // Consume newline
+        //     printf("Enter folder name: ");
+        //     scanf("%s", folder_name);
+        //     getchar(); // Consume newline
 
-            handle_create_group(sock, group_name, jobj);
-        }
-        else if (strcmp(command, "LIST_ALL_GROUPS") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("You do not have permission to see list groups. Please log in!\n");
-                continue;
-            }
-
-            handle_list_all_groups(sock, jobj);
-        }
-        else if (strcmp(command, "JOIN_GROUP") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("You do not have permission to request to join a group. Please log in!\n");
-                continue;
-            }
-
-            char group_name[MAX_GROUP_NAME];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
-
-            handle_join_group(sock, group_name, jobj);
-        }
-        else if (strcmp(command, "INVITE_TO_GROUP") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("Please login to use this function!\n");
-                continue;
-            }
-
-            char group_name[MAX_GROUP_NAME];
-            char invited_name[MAX_USERNAME];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
-            printf("Enter username who you want to invite: ");
-            scanf("%s", invited_name);
-            getchar(); // Consume newline
-
-            handle_invite_to_group(sock, group_name, invited_name, jobj);
-        }
-        else if (strcmp(command, "LIST_GROUP_MEMBERS") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("You do not have permission to see members in this group. Please log in.\n");
-                continue;
-            }
-
-            char group_name[MAX_GROUP_NAME];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
-
-            handle_list_group_members(sock, group_name, jobj);
-        }
-        else if (strcmp(command, "LIST_INVITATION") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("You do not have permission to see list groups. Please log in!\n");
-                continue;
-            }
-
-            handle_list_invitations(sock, jobj);
-        }
-        else if (strcmp(command, "REMOVE_MEMBER") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("You do not have permission to remove a member. Please log in.\n");
-                continue;
-            }
-
-            char group_name[MAX_GROUP_NAME];
-            char member_name[MAX_USERNAME];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
-            printf("Enter member name: ");
-            scanf("%s", member_name);
-            getchar(); // Consume newline
-
-            handle_remove_member(sock, group_name, member_name, jobj);
-        }
-        else if (strcmp(command, "APPROVAL") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("Please login to use this function!\n");
-                continue;
-            }
-
-            char group_name[MAX_GROUP_NAME];
-            char requester[MAX_USERNAME];
-            char decision[4]; // To accommodate "YES" or "NO"
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
-            printf("Enter requester: ");
-            scanf("%s", requester);
-            getchar(); // Consume newline
-            printf("Decision[YES/NO]: ");
-            scanf("%s", decision);
-            getchar(); // Consume newline
-
-            handle_approval(sock, group_name, requester, decision, jobj);
-        }
-        else if (strcmp(command, "JOIN_REQUEST_STATUS") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("You do not have permission to see list groups. Please log in!\n");
-                continue;
-            }
-
-            handle_join_request_status(sock, jobj);
-        }
-        else if (strcmp(command, "JOIN_REQUEST_LIST") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("You do not have permission to see members in this group. Please log in.\n");
-                continue;
-            }
-
-            char group_name[MAX_GROUP_NAME];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
-
-            handle_join_request_list(sock, group_name, jobj);
-        }
-        else if (strcmp(command, "FOLDER_CONTENT") == 0)
-        {
-            if (!is_logged_in)
-            {
-                printf("You do not have permission to see folder content in this group. Please log in.\n");
-                continue;
-            }
-
-            char group_name[MAX_GROUP_NAME];
-            char folder_name[MAX_GROUP_NAME];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
-            printf("Enter folder name: ");
-            scanf("%s", folder_name);
-            getchar(); // Consume newline
-
-            handle_folder_content(sock, group_name, folder_name, jobj);
-        }
+        //     handle_folder_content(sock, group_name, folder_name, jobj);
+        // }
         else if (strcmp(command, "CREATE_FOLDER") == 0)
         {
             if (!is_logged_in)
@@ -330,16 +164,16 @@ int main()
                 continue;
             }
 
-            char group_name[MAX_GROUP_NAME];
-            char folder_name[MAX_GROUP_NAME];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
+            char folder_path[MAX_PATH_LENGTH];
+            char folder_name[MAX_FOLDER_NAME];
+            printf("Enter folder path: ");
+            scanf("%s", folder_path);
             getchar(); // Consume newline
             printf("Enter folder name: ");
             scanf("%s", folder_name);
             getchar(); // Consume newline
 
-            handle_create_folder(sock, group_name, folder_name, jobj);
+            handle_create_folder(sock, folder_path, folder_name, jobj);
         }
         else if (strcmp(command, "FOLDER_RENAME") == 0)
         {
@@ -349,20 +183,16 @@ int main()
                 continue;
             }
 
-            char group_name[MAX_GROUP_NAME];
-            char folder_name[MAX_GROUP_NAME];
-            char new_name[MAX_GROUP_NAME];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
-            printf("Enter folder name: ");
-            scanf("%s", folder_name);
+            char folder_path[MAX_PATH_LENGTH];
+            char new_name[MAX_FOLDER_NAME];
+            printf("Enter folder path: ");
+            scanf("%s", folder_path);
             getchar(); // Consume newline
             printf("Enter new name: ");
             scanf("%s", new_name);
             getchar(); // Consume newline
 
-            handle_folder_rename(sock, group_name, folder_name, new_name, jobj);
+            handle_folder_rename(sock, folder_path, new_name, jobj);
         }
         else if (strcmp(command, "FOLDER_COPY") == 0)
         {
@@ -372,20 +202,16 @@ int main()
                 continue;
             }
 
-            char from_group[MAX_GROUP_NAME];
-            char to_group[MAX_GROUP_NAME];
-            char folder_name[MAX_GROUP_NAME];
-            printf("From group: ");
-            scanf("%s", from_group);
+            char from_folder[MAX_PATH_LENGTH];
+            char to_folder[MAX_PATH_LENGTH];
+            printf("From folder: ");
+            scanf("%s", from_folder);
             getchar(); // Consume newline
-            printf("To group: ");
-            scanf("%s", to_group);
-            getchar(); // Consume newline
-            printf("Enter folder name: ");
-            scanf("%s", folder_name);
+            printf("To folder: ");
+            scanf("%s", to_folder);
             getchar(); // Consume newline
 
-            handle_folder_copy(sock, from_group, to_group, folder_name, jobj);
+            handle_folder_copy(sock, from_folder, to_folder, jobj);
         }
         else if (strcmp(command, "FOLDER_MOVE") == 0)
         {
@@ -395,20 +221,16 @@ int main()
                 continue;
             }
 
-            char from_group[MAX_GROUP_NAME];
-            char to_group[MAX_GROUP_NAME];
-            char folder_name[MAX_GROUP_NAME];
-            printf("From group: ");
-            scanf("%s", from_group);
+            char from_folder[MAX_PATH_LENGTH];
+            char to_folder[MAX_PATH_LENGTH];
+            printf("From folder: ");
+            scanf("%s", from_folder);
             getchar(); // Consume newline
-            printf("To group: ");
-            scanf("%s", to_group);
-            getchar(); // Consume newline
-            printf("Enter folder name: ");
-            scanf("%s", folder_name);
+            printf("To folder: ");
+            scanf("%s", to_folder);
             getchar(); // Consume newline
 
-            handle_folder_move(sock, from_group, to_group, folder_name, jobj);
+            handle_folder_move(sock, from_folder, to_folder, jobj);
         }
         else if (strcmp(command, "FOLDER_DELETE") == 0)
         {
@@ -418,16 +240,65 @@ int main()
                 continue;
             }
 
-            char group_name[MAX_GROUP_NAME];
-            char folder_name[MAX_GROUP_NAME];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
+            char folder_path[MAX_PATH_LENGTH];
+            printf("Enter folder path: ");
+            scanf("%s", folder_path);
+            getchar(); // Consume newline
+
+            handle_folder_delete(sock, folder_path, jobj);
+        }
+        else if (strcmp(command, "FOLDER_SEARCH") == 0)
+        {
+            if (!is_logged_in)
+            {
+                printf("You do not have permission to search folders. Please log in!\n");
+                continue;
+            }
+
+            char search_term[MAX_FOLDER_NAME];
+            printf("Enter search term: ");
+            scanf("%s", search_term);
+            getchar(); // Consume newline
+
+            handle_search_folders(sock, search_term, jobj);
+        }
+        else if (strcmp(command, "FOLDER_DOWNLOAD") == 0)
+        {
+            if (!is_logged_in)
+            {
+                printf("You do not have permission to download a folder. Please log in!\n");
+                continue;
+            }
+
+            char folder_path[MAX_PATH_LENGTH];
+            char folder_owner[MAX_USERNAME];
+            printf("Enter folder path: ");
+            scanf("%s", folder_path);
+            getchar(); // Consume newline
+            printf("Enter folder owner: ");
+            scanf("%s", folder_owner);
+            getchar(); // Consume newline
+
+            handle_download_folder(sock, folder_path, folder_owner, jobj);
+        }
+        else if (strcmp(command, "FOLDER_UPLOAD") == 0)
+        {
+            if (!is_logged_in)
+            {
+                printf("You do not have permission to upload a folder. Please log in!\n");
+                continue;
+            }
+
+            char folder_path[MAX_PATH_LENGTH];
+            char folder_name[MAX_FOLDER_NAME];
+            printf("Enter folder path: ");
+            scanf("%s", folder_path);
             getchar(); // Consume newline
             printf("Enter folder name: ");
             scanf("%s", folder_name);
             getchar(); // Consume newline
 
-            handle_folder_delete(sock, group_name, folder_name, jobj);
+            handle_upload_folder(sock, folder_path, folder_name, jobj);
         }
         else if (strcmp(command, "UPLOAD_FILE") == 0)
         {
@@ -437,21 +308,17 @@ int main()
                 continue;
             }
 
-            char file_path[MAX_COMMAND_LENGTH];
+            char file_path[MAX_PATH_LENGTH];
             printf("Enter file path: ");
             scanf("%s", file_path);
             getchar(); // Consume newline
 
-            char group_name[MAX_GROUP_NAME];
-            char folder_name[MAX_GROUP_NAME];
-            printf("Upload at group: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
+            char folder_path[MAX_PATH_LENGTH];
             printf("Upload at folder: ");
-            scanf("%s", folder_name);
+            scanf("%s", folder_path);
             getchar(); // Consume newline
 
-            handle_upload_file(sock, group_name, folder_name, file_path, jobj);
+            handle_upload_file(sock, folder_path, file_path, jobj);
         }
         else if (strcmp(command, "DOWNLOAD_FILE") == 0)
         {
@@ -461,20 +328,16 @@ int main()
                 continue;
             }
 
-            char group_name[MAX_GROUP_NAME];
-            char folder_name[MAX_GROUP_NAME];
-            char file_name[MAX_COMMAND_LENGTH];
-            printf("Download from group: ");
-            scanf("%s", group_name);
+            char file_path[MAX_PATH_LENGTH];
+            char file_owner[MAX_USERNAME];
+            printf("Enter file path: ");
+            scanf("%s", file_path);
             getchar(); // Consume newline
-            printf("Download from folder: ");
-            scanf("%s", folder_name);
-            getchar(); // Consume newline
-            printf("Enter file name: ");
-            scanf("%s", file_name);
+            printf("Enter file owner: ");
+            scanf("%s", file_owner);
             getchar(); // Consume newline
 
-            handle_download_file(sock, group_name, folder_name, file_name, jobj);
+            handle_download_file(sock, file_path, file_owner, jobj);
         }
         else if (strcmp(command, "FILE_RENAME") == 0)
         {
@@ -484,24 +347,16 @@ int main()
                 continue;
             }
 
-            char group_name[MAX_GROUP_NAME];
-            char folder_name[MAX_GROUP_NAME];
-            char file_name[MAX_COMMAND_LENGTH];
+            char file_path[MAX_PATH_LENGTH];
             char new_name[MAX_COMMAND_LENGTH];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
-            printf("Enter folder name: ");
-            scanf("%s", folder_name);
-            getchar(); // Consume newline
-            printf("Enter file name that you want to rename: ");
-            scanf("%s", file_name);
+            printf("Enter file path: ");
+            scanf("%s", file_path);
             getchar(); // Consume newline
             printf("Enter new name: ");
             scanf("%s", new_name);
             getchar(); // Consume newline
 
-            handle_file_rename(sock, group_name, folder_name, file_name, new_name, jobj);
+            handle_file_rename(sock, file_path, new_name, jobj);
         }
         else if (strcmp(command, "FILE_COPY") == 0)
         {
@@ -511,28 +366,16 @@ int main()
                 continue;
             }
 
-            char from_group[MAX_GROUP_NAME];
-            char to_group[MAX_GROUP_NAME];
-            char from_folder[MAX_GROUP_NAME];
-            char to_folder[MAX_GROUP_NAME];
-            char file_name[MAX_COMMAND_LENGTH];
-            printf("From group: ");
-            scanf("%s", from_group);
-            getchar(); // Consume newline
-            printf("To group: ");
-            scanf("%s", to_group);
-            getchar(); // Consume newline
-            printf("From folder: ");
-            scanf("%s", from_folder);
+            char file_path[MAX_PATH_LENGTH];
+            char to_folder[MAX_PATH_LENGTH];
+            printf("Enter file path: ");
+            scanf("%s", file_path);
             getchar(); // Consume newline
             printf("To folder: ");
             scanf("%s", to_folder);
             getchar(); // Consume newline
-            printf("Enter file name: ");
-            scanf("%s", file_name);
-            getchar(); // Consume newline
 
-            handle_file_copy(sock, from_group, to_group, from_folder, to_folder, file_name, jobj);
+            handle_file_copy(sock, file_path, to_folder, jobj);
         }
         else if (strcmp(command, "FILE_MOVE") == 0)
         {
@@ -542,28 +385,16 @@ int main()
                 continue;
             }
 
-            char from_group[MAX_GROUP_NAME];
-            char to_group[MAX_GROUP_NAME];
-            char from_folder[MAX_GROUP_NAME];
-            char to_folder[MAX_GROUP_NAME];
-            char file_name[MAX_COMMAND_LENGTH];
-            printf("From group: ");
-            scanf("%s", from_group);
-            getchar(); // Consume newline
-            printf("To group: ");
-            scanf("%s", to_group);
-            getchar(); // Consume newline
-            printf("From folder: ");
-            scanf("%s", from_folder);
+            char file_path[MAX_PATH_LENGTH];
+            char to_folder[MAX_PATH_LENGTH];
+            printf("Enter file path: ");
+            scanf("%s", file_path);
             getchar(); // Consume newline
             printf("To folder: ");
             scanf("%s", to_folder);
             getchar(); // Consume newline
-            printf("Enter file name: ");
-            scanf("%s", file_name);
-            getchar(); // Consume newline
 
-            handle_file_move(sock, from_group, to_group, from_folder, to_folder, file_name, jobj);
+            handle_file_move(sock, file_path, to_folder, jobj);
         }
         else if (strcmp(command, "FILE_DELETE") == 0)
         {
@@ -573,22 +404,28 @@ int main()
                 continue;
             }
 
-            char group_name[MAX_GROUP_NAME];
-            char folder_name[MAX_GROUP_NAME];
-            char file_name[MAX_COMMAND_LENGTH];
-            printf("Enter group name: ");
-            scanf("%s", group_name);
-            getchar(); // Consume newline
-            printf("Enter folder name: ");
-            scanf("%s", folder_name);
-            getchar(); // Consume newline
-            printf("Enter file name that you want to delete: ");
-            scanf("%s", file_name);
+            char file_path[MAX_PATH_LENGTH];
+            printf("Enter file path: ");
+            scanf("%s", file_path);
             getchar(); // Consume newline
 
-            handle_file_delete(sock, group_name, folder_name, file_name, jobj);
+            handle_file_delete(sock, file_path, jobj);
         }
+        else if (strcmp(command, "FILE_SEARCH") == 0)
+        {
+            if (!is_logged_in)
+            {
+                printf("You do not have permission to search files. Please log in!\n");
+                continue;
+            }
 
+            char search_term[MAX_COMMAND_LENGTH];
+            printf("Enter search term: ");
+            scanf("%s", search_term);
+            getchar(); // Consume newline
+
+            handle_search_files(sock, search_term, jobj);
+        }
         else if (strcmp(command, "EXIT") == 0)
         {
             printf("Exiting the program...\n");
@@ -914,17 +751,19 @@ void handle_list_group_members(int sock, const char *group_name, struct json_obj
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void print_table_member(struct json_object *list_of_members_array, const char *group_name) {
+void print_table_member(struct json_object *list_of_members_array, const char *group_name)
+{
     printf("\n┌──────────────────┐\n");
     printf("│ %-16s │\n", "Members");
     printf("├──────────────────┤\n");
 
     int array_len = json_object_array_length(list_of_members_array);
-    for (int i = 0; i < array_len; i++) {
+    for (int i = 0; i < array_len; i++)
+    {
         struct json_object *member = json_object_array_get_idx(list_of_members_array, i);
         printf("│ %-16s │\n", json_object_get_string(member));
     }
-    
+
     printf("└──────────────────┘\n");
     printf("Group: %s\n\n", group_name);
 }
@@ -945,29 +784,36 @@ void handle_list_invitations(int sock, struct json_object *jobj)
     recv(sock, buffer, BUFFER_SIZE, 0);
 
     struct json_object *parsed_json = json_tokener_parse(buffer);
-    if (!parsed_json) {
+    if (!parsed_json)
+    {
         printf("Failed to parse server response\n");
         return;
     }
 
     struct json_object *response_code = NULL;
-    if (!json_object_object_get_ex(parsed_json, "responseCode", &response_code)) {
+    if (!json_object_object_get_ex(parsed_json, "responseCode", &response_code))
+    {
         printf("Invalid server response format\n");
         json_object_put(parsed_json);
         return;
     }
 
     int response_code_int = json_object_get_int(response_code);
-    switch (response_code_int) {
-    case 200: {
+    switch (response_code_int)
+    {
+    case 200:
+    {
         struct json_object *payload = NULL;
         struct json_object *list_of_invitations = NULL;
-        
+
         if (json_object_object_get_ex(parsed_json, "payload", &payload) &&
             json_object_object_get_ex(payload, "listOfInvitations", &list_of_invitations) &&
-            json_object_get_type(list_of_invitations) == json_type_array) {
+            json_object_get_type(list_of_invitations) == json_type_array)
+        {
             print_invitation_list(list_of_invitations);
-        } else {
+        }
+        else
+        {
             printf("No invitations found\n");
         }
         break;
@@ -980,17 +826,19 @@ void handle_list_invitations(int sock, struct json_object *jobj)
     json_object_put(parsed_json);
 }
 
-void print_invitation_list(struct json_object *list_of_invitations) {
+void print_invitation_list(struct json_object *list_of_invitations)
+{
     printf("\n┌──────────────────┐\n");
     printf("│ %-16s │\n", "Invitations");
     printf("├──────────────────┤\n");
 
     int array_len = json_object_array_length(list_of_invitations);
-    for (int i = 0; i < array_len; i++) {
+    for (int i = 0; i < array_len; i++)
+    {
         struct json_object *invitation = json_object_array_get_idx(list_of_invitations, i);
         printf("│ %-16s │\n", json_object_get_string(invitation));
     }
-    
+
     printf("└──────────────────┘\n\n");
 }
 
@@ -1279,11 +1127,11 @@ void print_table_files(struct json_object *folder_content_array, const char *fol
     }
 }
 
-void handle_create_folder(int sock, const char *group_name, const char *folder_name, struct json_object *jobj)
+void handle_create_folder(int sock, const char *folder_path, const char *folder_name, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
+    json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
     json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
     json_object_object_add(jobj, "messageType", json_object_new_string("CREATE_FOLDER"));
     json_object_object_add(jobj, "payload", jpayload);
@@ -1313,9 +1161,6 @@ void handle_create_folder(int sock, const char *group_name, const char *folder_n
     case 409:
         printf("Folder existed!\n");
         break;
-    case 403:
-        printf("You are not a member in group!\n");
-        break;
     case 501:
         printf("Server error!\n");
         break;
@@ -1326,12 +1171,11 @@ void handle_create_folder(int sock, const char *group_name, const char *folder_n
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_folder_rename(int sock, const char *group_name, const char *folder_name, const char *new_name, struct json_object *jobj)
+void handle_folder_rename(int sock, const char *folder_path, const char *new_name, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
-    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
+    json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
     json_object_object_add(jpayload, "newFolderName", json_object_new_string(new_name));
     json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_RENAME"));
     json_object_object_add(jobj, "payload", jpayload);
@@ -1361,9 +1205,6 @@ void handle_folder_rename(int sock, const char *group_name, const char *folder_n
     case 404:
         printf("Folder does not exist!\n");
         break;
-    case 403:
-        printf("You are not a member in group!\n");
-        break;
     case 501:
         printf("Server error!\n");
         break;
@@ -1374,13 +1215,12 @@ void handle_folder_rename(int sock, const char *group_name, const char *folder_n
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_folder_copy(int sock, const char *from_group, const char *to_group, const char *folder_name, struct json_object *jobj)
+void handle_folder_copy(int sock, const char *from_folder, const char *to_folder, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "fromGroup", json_object_new_string(from_group));
-    json_object_object_add(jpayload, "toGroup", json_object_new_string(to_group));
-    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
+    json_object_object_add(jpayload, "fromFolder", json_object_new_string(from_folder));
+    json_object_object_add(jpayload, "toFolder", json_object_new_string(to_folder));
     json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_COPY"));
     json_object_object_add(jobj, "payload", jpayload);
 
@@ -1409,9 +1249,6 @@ void handle_folder_copy(int sock, const char *from_group, const char *to_group, 
     case 404:
         printf("Folder does not exist!\n");
         break;
-    case 403:
-        printf("You are not a member in group!\n");
-        break;
     case 501:
         printf("Server error!\n");
         break;
@@ -1422,13 +1259,12 @@ void handle_folder_copy(int sock, const char *from_group, const char *to_group, 
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_folder_move(int sock, const char *from_group, const char *to_group, const char *folder_name, struct json_object *jobj)
+void handle_folder_move(int sock, const char *from_folder, const char *to_folder, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "fromGroup", json_object_new_string(from_group));
-    json_object_object_add(jpayload, "toGroup", json_object_new_string(to_group));
-    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
+    json_object_object_add(jpayload, "fromFolder", json_object_new_string(from_folder));
+    json_object_object_add(jpayload, "toFolder", json_object_new_string(to_folder));
     json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_MOVE"));
     json_object_object_add(jobj, "payload", jpayload);
 
@@ -1457,9 +1293,6 @@ void handle_folder_move(int sock, const char *from_group, const char *to_group, 
     case 404:
         printf("Folder does not exist!\n");
         break;
-    case 403:
-        printf("You are not a member in group!\n");
-        break;
     case 501:
         printf("Server error!\n");
         break;
@@ -1470,12 +1303,11 @@ void handle_folder_move(int sock, const char *from_group, const char *to_group, 
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_folder_delete(int sock, const char *group_name, const char *folder_name, struct json_object *jobj)
+void handle_folder_delete(int sock, const char *folder_path, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
-    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
+    json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
     json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_DELETE"));
     json_object_object_add(jobj, "payload", jpayload);
 
@@ -1504,8 +1336,49 @@ void handle_folder_delete(int sock, const char *group_name, const char *folder_n
     case 404:
         printf("Folder does not exist!\n");
         break;
-    case 403:
-        printf("You are not a member in group!\n");
+    case 501:
+        printf("Server error!\n");
+        break;
+    default:
+        break;
+    }
+
+    json_object_put(parsed_json); // Free the JSON object
+}
+
+void handle_search_folders(int sock, const char *folder_name, struct json_object *jobj)
+{
+    struct json_object *jpayload = json_object_new_object();
+
+    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_SEARCH"));
+    json_object_object_add(jobj, "payload", jpayload);
+
+    const char *request = json_object_to_json_string(jobj);
+    send(sock, request, strlen(request), 0);
+
+    json_object_put(jobj); // Free the JSON object
+
+    char buffer[BUFFER_SIZE];
+
+    // Check response
+    recv(sock, buffer, BUFFER_SIZE, 0);
+
+    struct json_object *parsed_json;
+    struct json_object *response_code;
+
+    parsed_json = json_tokener_parse(buffer);
+    json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+
+    int response_code_int = json_object_get_int(response_code);
+    // TODO: Implement handle response
+    switch (response_code_int)
+    {
+    case 200:
+        printf("Search folder successfully!\n");
+        break;
+    case 404:
+        printf("Folder does not exist!\n");
         break;
     case 501:
         printf("Server error!\n");
@@ -1517,7 +1390,94 @@ void handle_folder_delete(int sock, const char *group_name, const char *folder_n
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_upload_file(int sock, const char *group_name, const char *folder_name, const char *file_path, struct json_object *jobj)
+void handle_download_folder(int sock, const char *folder_path, const char *folder_owner, struct json_object *jobj)
+{
+    struct json_object *jpayload = json_object_new_object();
+
+    json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
+    json_object_object_add(jpayload, "folderOwner", json_object_new_string(folder_owner));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_DOWNLOAD"));
+    json_object_object_add(jobj, "payload", jpayload);
+
+    const char *request = json_object_to_json_string(jobj);
+    send(sock, request, strlen(request), 0);
+
+    json_object_put(jobj); // Free the JSON object
+
+    char buffer[BUFFER_SIZE];
+
+    // Check response
+    recv(sock, buffer, BUFFER_SIZE, 0);
+
+    struct json_object *parsed_json;
+    struct json_object *response_code;
+
+    parsed_json = json_tokener_parse(buffer);
+    json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+
+    int response_code_int = json_object_get_int(response_code);
+    // TODO: Implement handle response
+    switch (response_code_int)
+    {
+    case 200:
+        printf("Download folder successfully!\n");
+        break;
+    case 404:
+        printf("Folder does not exist!\n");
+        break;
+    case 501:
+        printf("Server error!\n");
+        break;
+    default:
+        break;
+    }
+
+    json_object_put(parsed_json); // Free the JSON object
+}
+
+void handle_upload_folder(int sock, const char *folder_path, const char *folder_name, struct json_object *jobj)
+{
+    struct json_object *jpayload = json_object_new_object();
+
+    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
+    json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_UPLOAD"));
+    json_object_object_add(jobj, "payload", jpayload);
+
+    const char *request = json_object_to_json_string(jobj);
+    send(sock, request, strlen(request), 0);
+
+    json_object_put(jobj); // Free the JSON object
+
+    char buffer[BUFFER_SIZE];
+    recv(sock, buffer, BUFFER_SIZE, 0);
+
+    struct json_object *parsed_json;
+    struct json_object *response_code;
+
+    parsed_json = json_tokener_parse(buffer);
+    json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+
+    int response_code_int = json_object_get_int(response_code);
+    switch (response_code_int)
+    {
+    case 200:
+        printf("Upload folder successfully!\n");
+        break;
+    case 404:
+        printf("Folder does not exist!\n");
+        break;
+    case 501:
+        printf("Server error!\n");
+        break;
+    default:
+        break;
+    }
+
+    json_object_put(parsed_json); // Free the JSON object
+}
+
+void handle_upload_file(int sock, const char *folder_path, const char *file_path, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
@@ -1532,8 +1492,7 @@ void handle_upload_file(int sock, const char *group_name, const char *folder_nam
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
-    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
+    json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
     json_object_object_add(jpayload, "fileName", json_object_new_string(get_filename(file_path)));
     json_object_object_add(jpayload, "fileSize", json_object_new_int64(file_size));
     json_object_object_add(jobj, "messageType", json_object_new_string("UPLOAD_FILE"));
@@ -1570,14 +1529,8 @@ void handle_upload_file(int sock, const char *group_name, const char *folder_nam
         fclose(file);
         printf("\nUploaded!\n");
         break;
-    case 404:
-        printf("Folder or Group does not exist!\n");
-        break;
     case 409:
         printf("File exists!\n");
-        break;
-    case 403:
-        printf("You are not a member of this group!\n");
         break;
     default:
         printf("Unknown error!\n");
@@ -1587,13 +1540,12 @@ void handle_upload_file(int sock, const char *group_name, const char *folder_nam
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_download_file(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *jobj)
+void handle_download_file(int sock, const char *file_path, const char *file_owner, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
-    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
-    json_object_object_add(jpayload, "fileName", json_object_new_string(file_name));
+    json_object_object_add(jpayload, "filePath", json_object_new_string(file_path));
+    json_object_object_add(jpayload, "fileOwner", json_object_new_string(file_owner));
     json_object_object_add(jobj, "messageType", json_object_new_string("DOWNLOAD_FILE"));
     json_object_object_add(jobj, "payload", jpayload);
 
@@ -1615,12 +1567,6 @@ void handle_download_file(int sock, const char *group_name, const char *folder_n
     int response_code_int = json_object_get_int(response_code);
     switch (response_code_int)
     {
-    case 404:
-        printf("Group or Folder or File does not exist!!!\n");
-        break;
-    case 403:
-        printf("You are not a member of this group!\n");
-        break;
     case 200:
         json_object_object_get_ex(parsed_json, "payload", &payload);
         struct json_object *file_size_obj;
@@ -1629,7 +1575,7 @@ void handle_download_file(int sock, const char *group_name, const char *folder_n
 
         if (file_size != 0)
         {
-            char path[MAX_COMMAND_LENGTH];
+            char path[MAX_PATH_LENGTH];
             printf("Input destination path: ");
             scanf("%s", path);
             getchar(); // Consume newline
@@ -1640,7 +1586,8 @@ void handle_download_file(int sock, const char *group_name, const char *folder_n
                 mkdir(path, 0777);
             }
 
-            char des_path[MAX_COMMAND_LENGTH + MAX_COMMAND_LENGTH];
+            char des_path[MAX_PATH_LENGTH];
+            char *file_name = get_filename(file_path);
             snprintf(des_path, sizeof(des_path), "%s/%s", path, file_name);
 
             FILE *f = fopen(des_path, "wb");
@@ -1672,13 +1619,11 @@ void handle_download_file(int sock, const char *group_name, const char *folder_n
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_file_rename(int sock, const char *group_name, const char *folder_name, const char *file_name, const char *new_name, struct json_object *jobj)
+void handle_file_rename(int sock, const char *file_path, const char *new_name, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
-    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
-    json_object_object_add(jpayload, "fileName", json_object_new_string(file_name));
+    json_object_object_add(jpayload, "filePath", json_object_new_string(file_path));
     json_object_object_add(jpayload, "newFileName", json_object_new_string(new_name));
     json_object_object_add(jobj, "messageType", json_object_new_string("FILE_RENAME"));
     json_object_object_add(jobj, "payload", jpayload);
@@ -1708,9 +1653,6 @@ void handle_file_rename(int sock, const char *group_name, const char *folder_nam
     case 404:
         printf("Folder or File does not exist!\n");
         break;
-    case 403:
-        printf("You are not a member in group!\n");
-        break;
     case 501:
         printf("Server error!\n");
         break;
@@ -1721,15 +1663,12 @@ void handle_file_rename(int sock, const char *group_name, const char *folder_nam
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_file_copy(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *jobj)
+void handle_file_copy(int sock, const char *file_path, const char *to_folder, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "fromGroup", json_object_new_string(from_group));
-    json_object_object_add(jpayload, "toGroup", json_object_new_string(to_group));
-    json_object_object_add(jpayload, "fromFolder", json_object_new_string(from_folder));
+    json_object_object_add(jpayload, "filePath", json_object_new_string(file_path));
     json_object_object_add(jpayload, "toFolder", json_object_new_string(to_folder));
-    json_object_object_add(jpayload, "fileName", json_object_new_string(file_name));
     json_object_object_add(jobj, "messageType", json_object_new_string("FILE_COPY"));
     json_object_object_add(jobj, "payload", jpayload);
 
@@ -1771,15 +1710,12 @@ void handle_file_copy(int sock, const char *from_group, const char *to_group, co
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_file_move(int sock, const char *from_group, const char *to_group, const char *from_folder, const char *to_folder, const char *file_name, struct json_object *jobj)
+void handle_file_move(int sock, const char *file_path, const char *to_folder, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "fromGroup", json_object_new_string(from_group));
-    json_object_object_add(jpayload, "toGroup", json_object_new_string(to_group));
-    json_object_object_add(jpayload, "fromFolder", json_object_new_string(from_folder));
+    json_object_object_add(jpayload, "filePath", json_object_new_string(file_path));
     json_object_object_add(jpayload, "toFolder", json_object_new_string(to_folder));
-    json_object_object_add(jpayload, "fileName", json_object_new_string(file_name));
     json_object_object_add(jobj, "messageType", json_object_new_string("FILE_MOVE"));
     json_object_object_add(jobj, "payload", jpayload);
 
@@ -1808,9 +1744,6 @@ void handle_file_move(int sock, const char *from_group, const char *to_group, co
     case 404:
         printf("Folder or File does not exist!\n");
         break;
-    case 403:
-        printf("You are not a member in group!\n");
-        break;
     case 501:
         printf("Server error!\n");
         break;
@@ -1821,13 +1754,11 @@ void handle_file_move(int sock, const char *from_group, const char *to_group, co
     json_object_put(parsed_json); // Free the JSON object
 }
 
-void handle_file_delete(int sock, const char *group_name, const char *folder_name, const char *file_name, struct json_object *jobj)
+void handle_file_delete(int sock, const char *file_path, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "groupName", json_object_new_string(group_name));
-    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
-    json_object_object_add(jpayload, "fileName", json_object_new_string(file_name));
+    json_object_object_add(jpayload, "filePath", json_object_new_string(file_path));
     json_object_object_add(jobj, "messageType", json_object_new_string("FILE_DELETE"));
     json_object_object_add(jobj, "payload", jpayload);
 
@@ -1856,13 +1787,49 @@ void handle_file_delete(int sock, const char *group_name, const char *folder_nam
     case 404:
         printf("Folder or File does not exist!\n");
         break;
-    case 403:
-        printf("You are not a member in group!\n");
-        break;
     case 501:
         printf("Server error!\n");
         break;
     default:
+        break;
+    }
+
+    json_object_put(parsed_json); // Free the JSON object
+}
+
+void handle_search_files(int sock, const char *file_name, struct json_object *jobj)
+{
+    struct json_object *jpayload = json_object_new_object();
+
+    json_object_object_add(jpayload, "fileName", json_object_new_string(file_name));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FILE_SEARCH"));
+    json_object_object_add(jobj, "payload", jpayload);
+
+    const char *request = json_object_to_json_string(jobj);
+    send(sock, request, strlen(request), 0);
+
+    char buffer[BUFFER_SIZE];
+    recv(sock, buffer, BUFFER_SIZE, 0);
+
+    struct json_object *parsed_json;
+    struct json_object *response_code;
+    struct json_object *payload;
+    struct json_object *file_list_array;
+
+    parsed_json = json_tokener_parse(buffer);
+    json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+
+    int response_code_int = json_object_get_int(response_code);
+    switch (response_code_int)
+    {
+    case 200:
+        printf("Search file successfully!\n");
+        break;
+    case 404:
+        printf("File does not exist!\n");
+        break;
+    default:
+        printf("You are not a member in group!\n");
         break;
     }
 
@@ -1875,45 +1842,40 @@ void print_usage(void)
     printf("LOGIN - Log in to the system\n");
     printf("REGISTER - Register a new user\n");
     printf("LOGOUT - Log out of the system\n");
-    // printf("CREATE_GROUP - Create a new group\n");
-    // printf("LIST_ALL_GROUPS - List all groups\n");
-    // printf("JOIN_GROUP - Request to join a group\n");
-    // printf("INVITE_TO_GROUP - Invite a user to a group\n");
-    // printf("LEAVE_GROUP - Leave a group\n");
-    // printf("LIST_GROUP_MEMBERS - List all members in a group\n");
-    // printf("LIST_INVITATION - List all invitations\n");
-    // printf("REMOVE_MEMBER - Remove a member from a group\n");
-    // printf("APPROVAL - Approve or deny a join request\n");
-    // printf("JOIN_REQUEST_STATUS - List all join request status\n");
-    // printf("JOIN_REQUEST_LIST - List all join requests for a group\n");
     printf("FOLDER_CONTENT - List all files in a folder\n");
     printf("CREATE_FOLDER - Create a new folder\n");
     printf("FOLDER_RENAME - Rename a folder\n");
     printf("FOLDER_COPY - Copy a folder to another group\n");
     printf("FOLDER_MOVE - Move a folder to another group\n");
     printf("FOLDER_DELETE - Delete a folder\n");
+    printf("SEARCH_FOLDERS - Search for a folder\n");
+    printf("DOWNLOAD_FOLDER - Download a folder\n");
+    printf("UPLOAD_FOLDER - Upload a folder\n");
     printf("UPLOAD_FILE - Upload a file to a folder\n");
     printf("DOWNLOAD_FILE - Download a file from a folder\n");
     printf("FILE_RENAME - Rename a file\n");
     printf("FILE_COPY - Copy a file to another group\n");
     printf("FILE_MOVE - Move a file to another group\n");
     printf("FILE_DELETE - Delete a file\n");
+    printf("SEARCH_FILES - Search for a file\n");
     printf("EXIT - Exit the program\n");
     printf("HELP - Show usage\n");
 }
 
-
-const char* get_filename(const char* path) {
+const char *get_filename(const char *path)
+{
     const char *filename = strrchr(path, '/');
-    if (filename == NULL) {
+    if (filename == NULL)
+    {
         return path; // No '/' found, return the original path
     }
     return filename + 1; // Skip the '/' character
 }
 
-void print_group_list(struct json_object *parsed_json) {
+void print_group_list(struct json_object *parsed_json)
+{
     struct json_object *payload, *list_groups_array;
-    
+
     // Navigate through the JSON structure
     json_object_object_get_ex(parsed_json, "payload", &payload);
     json_object_object_get_ex(payload, "listGroups", &list_groups_array);
@@ -1923,18 +1885,19 @@ void print_group_list(struct json_object *parsed_json) {
     printf("├──────────────┼──────────────┼─────────────────────┤\n");
 
     int array_len = json_object_array_length(list_groups_array);
-    for (int i = 0; i < array_len; i++) {
+    for (int i = 0; i < array_len; i++)
+    {
         struct json_object *group = json_object_array_get_idx(list_groups_array, i);
         struct json_object *group_name, *created_by, *created_at;
-        
+
         json_object_object_get_ex(group, "groupName", &group_name);
         json_object_object_get_ex(group, "createdBy", &created_by);
         json_object_object_get_ex(group, "createdAt", &created_at);
 
         printf("│ %-12s │ %-12s │ %-19s │\n",
-            json_object_get_string(group_name),
-            json_object_get_string(created_by),
-            json_object_get_string(created_at));
+               json_object_get_string(group_name),
+               json_object_get_string(created_by),
+               json_object_get_string(created_at));
     }
     printf("└──────────────┴──────────────┴─────────────────────┘\n\n");
 }
