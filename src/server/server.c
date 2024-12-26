@@ -120,7 +120,7 @@ void *handle_client(void *arg)
         json_object_object_get_ex(parsed_json, "messageType", &message_type);
         const char *type = json_object_get_string(message_type);
 
-        printf("Request from client: %s\n", buffer);
+        printf("Request from client: %s\n", strdup(buffer));
 
         if (!client->is_logged_in)
         {

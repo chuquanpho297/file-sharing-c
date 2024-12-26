@@ -18,19 +18,19 @@ void handle_file_create(client_t *client, const char *buffer)
     struct json_object *payload, *file_name_obj, *file_size_obj,
         *folder_path_obj;
     json_object_object_get_ex(parsed_json, "payload", &payload);
-    json_object_object_get_ex(payload, "fileName", &file_name_obj);
-    json_object_object_get_ex(payload, "fileSize", &file_size_obj);
-    json_object_object_get_ex(payload, "folderPath", &folder_path_obj);
+    file_name_obj = json_object_object_get(payload, "fileName");
+    file_size_obj = json_object_object_get(payload, "fileSize");
+    folder_path_obj = json_object_object_get(payload, "folderPath");
 
     const char *file_name = json_object_get_string(file_name_obj);
     long file_size = json_object_get_int64(file_size_obj);
     const char *folder_path = json_object_get_string(folder_path_obj);
     char *parent_id = db_get_root_folder_id(client->username);
     char *folder_name = NULL;
-
-    if (folder_path && strlen(folder_path) > 0)
+    char *folder_path_copy = strdup(folder_path);
+    if (folder_path_copy && strlen(folder_path_copy) > 0)
     {
-        char *token = strtok((char *)folder_path, "/");
+        char *token = strtok((char *)folder_path_copy, "/");
         while (token != NULL)
         {
             folder_name = token;
