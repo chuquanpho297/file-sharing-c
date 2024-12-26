@@ -18,19 +18,19 @@ void handle_file_create(client_t *client, const char *buffer)
     struct json_object *payload, *file_name_obj, *file_size_obj,
         *folder_path_obj;
     json_object_object_get_ex(parsed_json, "payload", &payload);
-    json_object_object_get_ex(payload, "fileName", &file_name_obj);
-    json_object_object_get_ex(payload, "fileSize", &file_size_obj);
-    json_object_object_get_ex(payload, "folderPath", &folder_path_obj);
+    file_name_obj = json_object_object_get(payload, "fileName");
+    file_size_obj = json_object_object_get(payload, "fileSize");
+    folder_path_obj = json_object_object_get(payload, "folderPath");
 
     const char *file_name = json_object_get_string(file_name_obj);
     long file_size = json_object_get_int64(file_size_obj);
     const char *folder_path = json_object_get_string(folder_path_obj);
     char *parent_id = db_get_root_folder_id(client->username);
     char *folder_name = NULL;
-
-    if (folder_path && strlen(folder_path) > 0)
+    char *folder_path_copy = strdup(folder_path);
+    if (folder_path_copy && strlen(folder_path_copy) > 0)
     {
-        char *token = strtok((char *)folder_path, "/");
+        char *token = strtok((char *)folder_path_copy, "/");
         while (token != NULL)
         {
             folder_name = token;
@@ -111,20 +111,10 @@ void handle_file_create(client_t *client, const char *buffer)
         receive_write_file(client->socket, file_size, fp);
         if (is_file_exists)
         {
-            send_response(client->socket, 200, "File uploaded successfully");
+            char *file_id = db_get_file_id(file_name, parent_id);
+            db_delete_file(file_id);
         }
-        else
-        {
-            if (db_create_file(file_name, file_size, parent_id,
-                               client->username))
-            {
-                send_response(client->socket, 201, "File created successfully");
-            }
-            else
-            {
-                send_response(client->socket, 500, "Failed to create file");
-            }
-        }
+        db_create_file(file_name, file_size, parent_id, client->username);
     }
     else
     {
@@ -466,6 +456,18 @@ void handle_file_search(client_t *client, const char *buffer)
                 json_object_new_int64(files->files[i].file_size));
             json_object_object_add(
                 file, "access", json_object_new_string(files->files[i].access));
+            json_object_object_add(
+                file, "folderName",
+                json_object_new_string(files->files[i].folder_name));
+            json_object_object_add(
+                file, "createdBy",
+                json_object_new_string(files->files[i].created_by));
+            json_object_object_add(
+                file, "createdAt",
+                json_object_new_string(files->files[i].created_at));
+            json_object_object_add(
+                file, "filePath",
+                json_object_new_string(files->files[i].file_path));
             json_object_array_add(files_array, file);
         }
 
@@ -520,7 +522,7 @@ void handle_file_download(client_t *client, const char *buffer)
                 json_object_put(parsed_json);
                 return;
             }
-            if (strcmp(db_get_file_access(file_id), "download") == 0)
+            if (strcmp(db_get_file_access(file_id), "download") != 0)
             {
                 send_response(client->socket, 403, "File access denied");
                 json_object_put(parsed_json);

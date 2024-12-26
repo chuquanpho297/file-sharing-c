@@ -26,6 +26,7 @@ typedef struct
     char* created_by;
     char* created_at;
     char* access;
+    char* file_path;
 } FileStruct;
 
 typedef struct
@@ -40,6 +41,7 @@ typedef struct
     char* folder_name;
     char* created_by;
     char* parent_folder_id;
+    char* folder_path;
     char* created_at;
     char* access;
 } FolderStruct;
