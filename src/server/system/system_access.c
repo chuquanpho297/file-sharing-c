@@ -371,3 +371,23 @@ const char *get_folder_name(const char *path)
 
     return last_slash + 1;
 }
+
+// Check if file exists
+bool file_exists(const char *filename) { return access(filename, F_OK) != -1; }
+
+// Create an empty file if it does not exist
+void create_empty_file_if_not_exists(const char *filename)
+{
+    if (!file_exists(filename))
+    {
+        FILE *fp = fopen(filename, "wb");
+        if (fp != NULL)
+        {
+            fclose(fp);
+        }
+        else
+        {
+            perror("Failed to create file");
+        }
+    }
+}

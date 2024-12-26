@@ -723,7 +723,6 @@ void handle_folder_search(client_t *client, const char *buffer)
 
         json_object_put(response);
 
-        // TODO: Add function to free FolderList
         free(folders);
     }
     else

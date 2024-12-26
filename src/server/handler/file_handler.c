@@ -10,6 +10,7 @@
 #include "../../utils/helper.h"
 #include "../../utils/structs.h"
 #include "../db/db_access.h"
+#include "../system/system_access.h"
 
 void handle_file_create(client_t *client, const char *buffer)
 {
@@ -566,24 +567,4 @@ void handle_file_download(client_t *client, const char *buffer)
     // }
 
     json_object_put(parsed_json);
-}
-
-// Check if file exists
-bool file_exists(const char *filename) { return access(filename, F_OK) != -1; }
-
-// Create an empty file if it does not exist
-void create_empty_file_if_not_exists(const char *filename)
-{
-    if (!file_exists(filename))
-    {
-        FILE *fp = fopen(filename, "wb");
-        if (fp != NULL)
-        {
-            fclose(fp);
-        }
-        else
-        {
-            perror("Failed to create file");
-        }
-    }
 }

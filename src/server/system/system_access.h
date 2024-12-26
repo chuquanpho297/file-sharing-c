@@ -30,5 +30,7 @@ bool is_folder_exist(const char *folder_path);
 void create_folder_if_not_exists(const char *folder_path);
 const char *get_filename(const char *path);
 const char *get_folder_name(const char *path);
+bool file_exists(const char *filename);
+void create_empty_file_if_not_exists(const char *filename);
 
 #endif  // SYSTEM_ACCESS_H
