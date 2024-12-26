@@ -24,5 +24,6 @@ void handle_file_get_access(client_t *client, const char *buffer);
 
 // Search handlers
 void handle_file_search(client_t *client, const char *buffer);
+void create_empty_file_if_not_exists(const char *filename);
 
 #endif  // FILE_HANDLER_H

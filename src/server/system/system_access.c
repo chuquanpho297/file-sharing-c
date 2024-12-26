@@ -1,6 +1,7 @@
 #include "system_access.h"
 
 #include <dirent.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -329,4 +330,17 @@ void extract_zip(const char *zip_path, const char *dest_path)
     }
 
     zip_close(zip);
+}
+
+bool is_folder_exist(const char *folder_path)
+{
+    return opendir(folder_path) != NULL ? true : false;
+}
+
+void create_folder_if_not_exists(const char *folder_path)
+{
+    if (!is_folder_exist(folder_path))
+    {
+        mkdir(folder_path, 0777);
+    }
 }

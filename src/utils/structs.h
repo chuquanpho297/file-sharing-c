@@ -5,6 +5,8 @@
 #define MAX_PASSWORD 32
 #define MAX_CLIENTS 100
 #define BUFFER_SIZE 8192
+#define MAX_FOLDER_NAME 32
+#define MAX_PATH_LENGTH 4096
 #define PORT 5555
 
 typedef struct

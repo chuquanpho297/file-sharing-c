@@ -12,6 +12,8 @@
 #include "../../utils/helper.h"
 #include "../../utils/structs.h"
 #include "../db/db_access.h"
+#include "../system/system_access.h"
+#include "./file_handler.h"
 
 void handle_folder_content(client_t *client, const char *buffer)
 {
@@ -165,7 +167,8 @@ void handle_folder_create(client_t *client, const char *buffer)
 void handle_folder_upload(client_t *client, const char *buffer)
 {
     struct json_object *parsed_json = json_tokener_parse(buffer);
-    struct json_object *payload, *folder_path_obj, *folder_name_obj;
+    struct json_object *payload, *folder_path_obj, *folder_name_obj,
+        *zip_folder_size_obj;
 
     json_object_object_get_ex(parsed_json, "payload", &payload);
     json_object_object_get_ex(payload, "folderPath", &folder_path_obj);
@@ -173,6 +176,7 @@ void handle_folder_upload(client_t *client, const char *buffer)
 
     char *folder_path = strdup(json_object_get_string(folder_path_obj));
     const char *folder_name = json_object_get_string(folder_name_obj);
+    long zip_folder_size = json_object_get_int64(zip_folder_size_obj);
 
     char *path_copy = strdup(folder_path);
     char *token = strtok(path_copy, "/");
@@ -185,7 +189,8 @@ void handle_folder_upload(client_t *client, const char *buffer)
             db_get_folder_id(parent_folder, client->username, parent_id);
         if (parent_id == NULL)
         {
-            send_response(client->socket, 500, "Failed to upload folder");
+            send_response(client->socket, 404,
+                          strcat("Folder not found: ", parent_folder));
             json_object_put(parsed_json);
             free(folder_path);
             free(path_copy);
@@ -194,23 +199,63 @@ void handle_folder_upload(client_t *client, const char *buffer)
         token = strtok(NULL, "/");
     }
 
-    if (db_check_folder_exist(folder_name, client->username, parent_id))
+    // if folder name existed, add version number
+    int version = 0;
+    char *new_folder_name = strdup(folder_name);
+    while (!db_check_folder_exist(folder_name, client->username, parent_id))
     {
-        send_response(client->socket, 500, "Folder already exists");
+        char *new_folder_name = snprintf("%s_(%d)", folder_name, version);
+        folder_name = new_folder_name;
+        version++;
+    }
+
+    char parent_upload_folder_path[MAX_PATH_LENGTH];
+    snprintf(parent_upload_folder_path, sizeof(parent_upload_folder_path),
+             "root/%s/%s", client->username, folder_path);
+
+    // Calculate required space
+    size_t required_len = strlen(parent_upload_folder_path) +
+                          strlen(folder_name) +
+                          2;  // +2 for '/' and null terminator
+    if (required_len > MAX_PATH_LENGTH)
+    {
+        send_response(client->socket, 400, "Path too long");
         json_object_put(parsed_json);
         free(folder_path);
         free(path_copy);
         return;
     }
 
-    if (db_create_folder(folder_name, parent_id, client->username))
+    char *upload_folder_path[MAX_PATH_LENGTH];
+    snprintf(upload_folder_path, sizeof(upload_folder_path) + 1, "%s/%s",
+             parent_upload_folder_path, folder_name);
+
+    // Create empty upload folder
+    if (mkdir(upload_folder_path, 0777) == -1)
     {
-        send_response(client->socket, 201, "Folder created successfully");
+        send_response(client->socket, 500,
+                      strcat("Failed to create folder: ", folder_name));
+        json_object_put(parsed_json);
+        free(folder_path);
+        free(path_copy);
+        return;
     }
-    else
-    {
-        send_response(client->socket, 500, "Failed to create folder");
-    }
+
+    db_create_folder(folder_name, parent_id, client->username);
+
+    struct json_object *readyResponse = json_object_new_object();
+    struct json_object *readyResponsePayload = json_object_new_object();
+    json_object_object_add(readyResponse, "responseCode",
+                           json_object_new_int(200));
+    json_object_object_add(readyResponsePayload, "message",
+                           json_object_new_string("Ready to upload folder"));
+    json_object_object_add(readyResponsePayload, "validFolderName",
+                           json_object_new_string(folder_name));
+
+    const char *readyResponseStr = json_object_to_json_string(readyResponse);
+    send(client->socket, readyResponseStr, strlen(readyResponseStr), 0);
+
+    json_object_put(readyResponse);
     json_object_put(parsed_json);
     free(folder_path);
     free(path_copy);
@@ -227,20 +272,22 @@ void handle_folder_download(client_t *client, const char *buffer)
 
     char *folder_path = strdup(json_object_get_string(folder_path_obj));
     const char *folder_owner = json_object_get_string(folder_owner_obj);
+
     if (folder_owner == NULL)
     {
         folder_owner = client->username;
     }
+
     char *path_copy = strdup(folder_path);
     char *token = strtok(path_copy, "/");
-    char *parent_folder = NULL;
-    char *folder_id = db_get_root_folder_id(folder_owner);
+    char *folder_name = NULL;
+    char *parent_id = db_get_root_folder_id(folder_owner);
+
     while (token != NULL)
     {
-        parent_folder = token;
-        folder_id =
-            db_get_folder_id(parent_folder, client->username, folder_id);
-        if (folder_id == NULL)
+        folder_name = token;
+        parent_id = db_get_folder_id(folder_name, folder_owner, parent_id);
+        if (parent_id == NULL)
         {
             send_response(client->socket, 500, "Failed to download folder");
             json_object_put(parsed_json);
@@ -251,7 +298,69 @@ void handle_folder_download(client_t *client, const char *buffer)
         token = strtok(NULL, "/");
     }
 
-    // download_folder_handler(folder_path, folder_owner);
+    const exact_folder_path[MAX_PATH_LENGTH];
+    snprintf(exact_folder_path, sizeof(exact_folder_path) + 1, "root/%s/%s",
+             folder_owner, folder_path);
+
+    // Check if temp_folder_path exists, if not, create it
+    const char *temp_folder_path = "temp";
+    create_folder_if_not_exists(temp_folder_path);
+    // TODO: check if zip folder name is duplicated, if yes, add version number
+    // Zip the folder
+    printf("Compressing folder...\n");
+    const char *temp_zip_folder_path[MAX_PATH_LENGTH];
+    const char *temp_zip_folder_name[MAX_FOLDER_NAME];
+
+    snprintf(temp_zip_folder_name, sizeof(temp_zip_folder_name) + 1, "%s.zip",
+             folder_name);
+    snprintf(temp_zip_folder_path, sizeof(temp_zip_folder_path) + 1, "%s/%s",
+             temp_folder_path, temp_zip_folder_name);
+    compress_folder(exact_folder_path, temp_zip_folder_path);
+
+    // Send the zip file
+    FILE *fp = fopen(temp_zip_folder_path, "rb");
+
+    if (fp != NULL)
+    {
+        fseek(fp, 0, SEEK_END);
+        long file_size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+
+        struct json_object *response = json_object_new_object();
+        struct json_object *response_payload = json_object_new_object();
+        json_object_object_add(response, "responseCode",
+                               json_object_new_int(200));
+        json_object_object_add(response_payload, "fileSize",
+                               json_object_new_int64(file_size));
+        json_object_object_add(response_payload, "zipFoldername",
+                               json_object_new_string(temp_zip_folder_name));
+        json_object_object_add(response, "payload", response_payload);
+        char *response_str = json_object_to_json_string(response);
+        send(client->socket, response_str, strlen(response_str), 0);
+
+        json_object_put(response);
+
+        char buffer[BUFFER_SIZE];
+        long total_received = 0;
+        int bytes_received;
+
+        while (total_received < file_size &&
+               (bytes_received =
+                    recv(client->socket, buffer, sizeof(buffer), 0)) > 0)
+        {
+            fwrite(buffer, 1, bytes_received, fp);
+            total_received += bytes_received;
+        }
+
+        fclose(fp);
+        send_response(client->socket, 200, "Folder download successfully");
+        remove(temp_zip_folder_path);
+    }
+    else
+    {
+        send_response(client->socket, 500, "Failed to download folder");
+    }
+
     free(folder_path);
     free(path_copy);
 }
