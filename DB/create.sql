@@ -437,8 +437,9 @@ BEGIN
         f.fileSize,
         fo.folderName,
         fo.createBy,
-        f.createdAt,
-        f.access
+        f.createAt,
+        f.access,
+        GetFilePath(f.fileID) as filePath
     FROM File f
     JOIN Folder fo ON f.folderID = fo.folderID
     WHERE f.fName LIKE CONCAT('%', file_name, '%') AND (f.access = 'view' OR f.access = 'download');
@@ -450,7 +451,8 @@ BEGIN
         folderID,
         folderName,
         createBy,
-        access
+        access,
+        GetFolderPath(folderID) as folderPath
     FROM Folder
     WHERE folderName LIKE CONCAT('%', folder_name, '%') AND (access = 'view' OR access = 'download');
 END //
@@ -511,6 +513,67 @@ RETURNS BOOLEAN DETERMINISTIC
 BEGIN
     UPDATE Folder SET parentFolderID = parent_folder_id WHERE folderID = folder_id;
     RETURN TRUE;
+END //
+
+CREATE FUNCTION GetFilePath(file_id VARCHAR(255))
+RETURNS VARCHAR(255) DETERMINISTIC
+BEGIN
+    DECLARE file_path VARCHAR(255);
+    DECLARE folder_id VARCHAR(255);
+    DECLARE folder_name VARCHAR(255);
+    DECLARE parent_folder_id VARCHAR(255);
+    DECLARE done BOOLEAN DEFAULT FALSE;
+    
+    -- Get initial file name and folder ID
+    SELECT f.fName, f.folderID INTO file_path, folder_id 
+    FROM File f
+    WHERE f.fileID = file_id;
+    
+    -- Get folder path by traversing up the folder hierarchy
+    WHILE folder_id IS NOT NULL DO
+        SELECT folderName, parentFolderID 
+        INTO folder_name, parent_folder_id
+        FROM Folder 
+        WHERE folderID = folder_id;
+        
+        IF folder_name IS NOT NULL THEN
+            SET file_path = CONCAT(folder_name, '/', file_path);
+        END IF;
+        
+        SET folder_id = parent_folder_id;
+    END WHILE;
+    
+    RETURN file_path;
+END //
+
+CREATE FUNCTION GetFolderPath(folder_id VARCHAR(255))
+RETURNS VARCHAR(255) DETERMINISTIC
+BEGIN
+    DECLARE folder_path VARCHAR(255);
+    DECLARE folder_name VARCHAR(255);
+    DECLARE parent_folder_id VARCHAR(255);
+    DECLARE done BOOLEAN DEFAULT FALSE;
+
+    SELECT folderName, parentFolderID INTO folder_name, parent_folder_id
+    FROM Folder
+    WHERE folderID = folder_id;
+
+    SET folder_path = folder_name;
+    SET folder_id = parent_folder_id;
+
+    WHILE folder_id IS NOT NULL DO
+        SELECT folderName, parentFolderID INTO folder_name, parent_folder_id
+        FROM Folder
+        WHERE folderID = folder_id;
+
+        IF folder_name IS NOT NULL THEN
+            SET folder_path = CONCAT(folder_name, '/', folder_path);
+        END IF;
+
+        SET folder_id = parent_folder_id;
+    END WHILE;
+
+    RETURN folder_path;
 END //
 
 DELIMITER ;

@@ -812,6 +812,7 @@ FileList *db_search_file(const char *file_name)
         list->files[i].created_by = strdup(row[5]);
         list->files[i].created_at = strdup(row[6]);
         list->files[i].access = strdup(row[7]);
+        list->files[i].file_path = strdup(row[8]);
         i++;
     }
 
@@ -856,6 +857,7 @@ FolderList *db_search_folder(const char *folder_name)
         list->folders[i].folder_name = strdup(row[1]);
         list->folders[i].created_by = strdup(row[2]);
         list->folders[i].access = strdup(row[3]);
+        list->folders[i].folder_path = strdup(row[4]);
         i++;
     }
 

@@ -699,6 +699,9 @@ void handle_folder_search(client_t *client, const char *buffer)
             json_object_object_add(
                 folder, "access",
                 json_object_new_string(folders->folders[i].access));
+            json_object_object_add(
+                folder, "folderPath",
+                json_object_new_string(folders->folders[i].folder_path));
             json_object_array_add(folders_array, folder);
         }
 

@@ -31,43 +31,41 @@ void handle_register_client(int sock, const char *username,
 // *folder_name, struct json_object *j); void print_table_files(struct
 // json_object *folder_content_array, const char *folder_name, const char
 // *group_name);
-void handle_folder_create_client(int sock, const char *folder_path,
-                                 const char *folder_name,
-                                 struct json_object *j);
-void handle_folder_rename_client(int sock, const char *folder_path,
-                                 const char *new_name, struct json_object *j);
-void handle_folder_copy_client(int sock, const char *from_folder,
-                               const char *to_folder, struct json_object *j);
-void handle_folder_move_client(int sock, const char *from_folder,
-                               const char *to_folder, struct json_object *j);
-void handle_folder_delete_client(int sock, const char *folder_path,
-                                 struct json_object *j);
-void handle_folder_search_client(int sock, const char *search_term,
-                                 struct json_object *j);
-void handle_folder_download_client(int sock, const char *folder_path,
-                                   const char *folder_owner,
-                                   char *des_folder_path,
-                                   struct json_object *jobj);
-void handle_folder_upload_client(int sock, const char *folder_path,
-                                 const char *folder_name,
-                                 struct json_object *j);
-void handle_file_upload_client(int sock, const char *folder_path,
-                               const char *file_path, struct json_object *j);
-void handle_file_download_client(int sock, const char *file_path,
-                                 const char *file_owner, struct json_object *j);
-void handle_file_rename_client(int sock, const char *file_path,
-                               const char *new_name, struct json_object *j);
-void handle_file_copy_client(int sock, const char *file_path,
-                             const char *to_folder, struct json_object *j);
-void handle_file_move_client(int sock, const char *file_path,
-                             const char *to_folder, struct json_object *j);
-void handle_file_delete_client(int sock, const char *file_path,
-                               struct json_object *j);
-void handle_logout_client(int sock, int *is_logged_in, char *current_user);
-void handle_file_search_client(int sock, const char *search_term,
-                               struct json_object *j);
-void send_folder(int sock, const char *upload_folder_path,
-                 const char *des_folder_path);
+void handle_folder_create(int sock, const char *folder_path,
+                          const char *folder_name, struct json_object *j);
+void handle_folder_rename(int sock, const char *folder_path,
+                          const char *new_name, struct json_object *j);
+void handle_folder_copy(int sock, const char *from_folder,
+                        const char *to_folder, struct json_object *j);
+void handle_folder_move(int sock, const char *from_folder,
+                        const char *to_folder, struct json_object *j);
+void handle_folder_delete(int sock, const char *folder_path,
+                          struct json_object *j);
+void handle_folder_search(int sock, const char *search_term,
+                          struct json_object *j);
+void handle_folder_download(int sock, const char *folder_path,
+                            const char *folder_owner, struct json_object *j);
+void handle_folder_upload(int sock, const char *folder_path,
+                          const char *folder_name, struct json_object *j);
+void handle_file_upload(int sock, const char *folder_path,
+                        const char *file_path, struct json_object *j);
+void handle_file_download(int sock, const char *file_path,
+                          const char *file_owner, struct json_object *j);
+void handle_file_rename(int sock, const char *file_path, const char *new_name,
+                        struct json_object *j);
+void handle_file_copy(int sock, const char *file_path, const char *to_folder,
+                      struct json_object *j);
+void handle_file_move(int sock, const char *file_path, const char *to_folder,
+                      struct json_object *j);
+void handle_file_delete(int sock, const char *file_path, struct json_object *j);
+void handle_file_search(int sock, const char *file_name,
+                        struct json_object *jobj);
+void handle_logout(int sock, int *is_logged_in, char *current_user);
+void handle_file_search(int sock, const char *search_term,
+                        struct json_object *j);
+void send_file(int sock, const char *file_path);
+const char *get_filename(const char *path);
+
 int main()
 {
     int sock = 0;
@@ -332,6 +330,7 @@ int main()
 
             printf("Enter folder path: ");
             scanf("%s", folder_path);
+            while (getchar() != '\n');  // Consume newline
             while (getchar() != '\n');  // Consume newline
             printf("Enter folder owner: ");
             scanf("%s", folder_owner);
@@ -853,7 +852,36 @@ void handle_folder_search_client(int sock, const char *folder_name,
     // Check response
     char *response = handle_response_chunk(sock, BUFFER_SIZE);
 
-    handle_print_payload_response(response, print_message_oneline);
+    struct json_object *parsed_json = json_tokener_parse(response);
+    struct json_object *response_code;
+    struct json_object *payload;
+    json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+    json_object_object_get_ex(parsed_json, "payload", &payload);
+    printf("responseCode: %d\n", json_object_get_int(response_code));
+    struct json_object *folder_content_array =
+        json_object_object_get(payload, "folders");
+
+    printf("%-16s %-6s  %-9s  %s \n", "Folder Name", "Created By", "Access",
+           "Folder Path");
+    int array_size = json_object_array_length(folder_content_array);
+    for (int i = 0; i < array_size; i++)
+    {
+        struct json_object *folder =
+            json_object_array_get_idx(folder_content_array, i);
+        struct json_object *folder_name =
+            json_object_object_get(folder, "folderName");
+        struct json_object *created_by =
+            json_object_object_get(folder, "createdBy");
+        struct json_object *access = json_object_object_get(folder, "access");
+        struct json_object *folder_path =
+            json_object_object_get(folder, "folderPath");
+        printf("%-16s %-6s  %-9s  %s \n", json_object_get_string(folder_name),
+               json_object_get_string(created_by),
+               json_object_get_string(access),
+               json_object_get_string(folder_path));
+    }
+
+    json_object_put(parsed_json);
 }
 
 void handle_folder_download_client(int sock, const char *folder_path,
@@ -1004,7 +1032,13 @@ void send_folder(int sock, const char *upload_folder_path,
 
     while ((entry = readdir(dir)) != NULL)
     {
-        if (entry->d_type == DT_DIR)
+        struct stat path_stat;
+        char full_path[BUFFER_SIZE];
+        snprintf(full_path, sizeof(full_path), "%s/%s", folder_path,
+                 entry->d_name);
+        stat(full_path, &path_stat);
+
+        if (S_ISDIR(path_stat.st_mode))
         {
             if (strcmp(entry->d_name, ".") == 0 ||
                 strcmp(entry->d_name, "..") == 0)
@@ -1080,11 +1114,16 @@ void handle_file_upload_client(int sock, const char *folder_path,
         int response_code_int = json_object_get_int(response_code);
         print_message_oneline(response_code_int, payload);
 
-        if (response_code_int == 409)
+        if (response_code_int == 409 || response_code_int == 400)
         {
             printf("File already exists. Do you want to overwrite it? (Y/N)\n");
-            char answer[1];
-            scanf("%s", answer);
+            char answer[2];
+            fgets(answer, sizeof(answer), stdin);
+            strtok(answer, "\n");
+            if (strlen(answer) == 0)
+            {
+                answer[0] = 'Y';
+            }
             struct json_object *tmp = json_object_new_object();
             json_object_object_add(tmp, "answer",
                                    json_object_new_string(answer));
@@ -1177,8 +1216,13 @@ void handle_file_download_client(int sock, const char *file_path,
 
             char des_path[MAX_PATH_LENGTH];
             const char *file_name = get_filename(file_path);
-            int ret =
-                snprintf(des_path, sizeof(des_path), "%s/%s", path, file_name);
+           int ret = snprintf(des_path, sizeof(des_path), "%s/%s", path, file_name);
+
+            if (ret >= sizeof(des_path))
+            {
+                printf("Destination path is too long!\n");
+                return;
+            }
 
             if (ret >= sizeof(des_path))
             {
@@ -1317,7 +1361,17 @@ void handle_file_search_client(int sock, const char *file_name,
 
     char *response = handle_response_chunk(sock, BUFFER_SIZE);
     // TODO: Update print found files
-    handle_print_payload_response(response, print_message_oneline);
+    struct json_object *parsed_json;
+    struct json_object *response_code;
+    struct json_object *payload;
+    struct json_object *files;
+    parsed_json = json_tokener_parse(response);
+    json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+    json_object_object_get_ex(parsed_json, "payload", &payload);
+    json_object_object_get_ex(payload, "files", &files);
+    int response_code_int = json_object_get_int(response_code);
+    printf("Response code: %d\n", response_code_int);
+    print_file_table(files);
 }
 
 void print_usage(void)

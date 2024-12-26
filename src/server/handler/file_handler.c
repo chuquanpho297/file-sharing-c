@@ -111,20 +111,10 @@ void handle_file_create(client_t *client, const char *buffer)
         receive_write_file(client->socket, file_size, fp);
         if (is_file_exists)
         {
-            send_response(client->socket, 200, "File uploaded successfully");
+            char *file_id = db_get_file_id(file_name, parent_id);
+            db_delete_file(file_id);
         }
-        else
-        {
-            if (db_create_file(file_name, file_size, parent_id,
-                               client->username))
-            {
-                send_response(client->socket, 201, "File created successfully");
-            }
-            else
-            {
-                send_response(client->socket, 500, "Failed to create file");
-            }
-        }
+        db_create_file(file_name, file_size, parent_id, client->username);
     }
     else
     {
@@ -466,6 +456,18 @@ void handle_file_search(client_t *client, const char *buffer)
                 json_object_new_int64(files->files[i].file_size));
             json_object_object_add(
                 file, "access", json_object_new_string(files->files[i].access));
+            json_object_object_add(
+                file, "folderName",
+                json_object_new_string(files->files[i].folder_name));
+            json_object_object_add(
+                file, "createdBy",
+                json_object_new_string(files->files[i].created_by));
+            json_object_object_add(
+                file, "createdAt",
+                json_object_new_string(files->files[i].created_at));
+            json_object_object_add(
+                file, "filePath",
+                json_object_new_string(files->files[i].file_path));
             json_object_array_add(files_array, file);
         }
 
@@ -520,7 +522,7 @@ void handle_file_download(client_t *client, const char *buffer)
                 json_object_put(parsed_json);
                 return;
             }
-            if (strcmp(db_get_file_access(file_id), "download") == 0)
+            if (strcmp(db_get_file_access(file_id), "download") != 0)
             {
                 send_response(client->socket, 403, "File access denied");
                 json_object_put(parsed_json);

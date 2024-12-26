@@ -91,3 +91,40 @@ char *handle_response_chunk(int sock, int max_size)
     response[total_received] = '\0';
     return response;
 }
+
+void print_file_table(struct json_object *files)
+{
+    
+   
+    printf("%-16s  %-6s  %-6s  %-9s  %-19s  %s \n",
+           "File Name", "Size", "Access", "Created By",
+           "Created At", "File Path");
+
+    int array_size = json_object_array_length(files);
+    for (int i = 0; i < array_size; i++)
+    {
+        struct json_object *file = json_object_array_get_idx(files, i);
+    
+        struct json_object *file_name =
+            json_object_object_get(file, "fileName");
+        struct json_object *file_size =
+            json_object_object_get(file, "fileSize");
+        struct json_object *access = json_object_object_get(file, "access");
+        struct json_object *created_by =
+            json_object_object_get(file, "createdBy");
+        struct json_object *created_at =
+            json_object_object_get(file, "createdAt");
+        struct json_object *file_path =
+            json_object_object_get(file, "filePath");
+        printf(
+            "%-16s  %-6s  %-6s  %-9s  %-19s  %s\n",
+             json_object_get_string(file_name),
+            json_object_get_string(file_size), json_object_get_string(access),
+            json_object_get_string(created_by),
+            json_object_get_string(created_at),
+            json_object_get_string(file_path));
+    }
+    // Print table rows
+
+}
+
