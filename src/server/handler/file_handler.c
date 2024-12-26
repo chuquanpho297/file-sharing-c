@@ -33,7 +33,8 @@ void handle_file_create(client_t *client, const char *buffer)
         while (token != NULL)
         {
             folder_name = token;
-            parent_id = db_get_folder_id(folder_name, client->username, parent_id);
+            parent_id =
+                db_get_folder_id(folder_name, client->username, parent_id);
             if (parent_id == NULL)
             {
                 send_response(client->socket, 404, "Folder not found");
@@ -50,7 +51,8 @@ void handle_file_create(client_t *client, const char *buffer)
     mkdir(path, 0777);
 
     // Calculate required space
-    size_t required_len = strlen(path) + strlen(file_name) + 2; // +2 for '/' and null terminator
+    size_t required_len =
+        strlen(path) + strlen(file_name) + 2;  // +2 for '/' and null terminator
     if (required_len > 4096)
     {
         send_response(client->socket, 400, "Path too long");
@@ -60,7 +62,8 @@ void handle_file_create(client_t *client, const char *buffer)
 
     // Safe concatenation
     snprintf(file_path, sizeof(file_path) + 1, "%s/%s", path, file_name);
-    int is_file_exists = db_check_file_exist(file_name, client->username, parent_id);
+    int is_file_exists =
+        db_check_file_exist(file_name, client->username, parent_id);
 
     if (is_file_exists)
     {
@@ -75,7 +78,8 @@ void handle_file_create(client_t *client, const char *buffer)
         if (strcmp(answer_str, "Y") != 0 && strcmp(answer_str, "y") != 0 &&
             strcmp(answer_str, "N") != 0 && strcmp(answer_str, "n") != 0)
         {
-            send_response(client->socket, 400, "Invalid answer. Please respond with Y/N");
+            send_response(client->socket, 400,
+                          "Invalid answer. Please respond with Y/N");
             json_object_put(tmp_json);
             json_object_put(parsed_json);
             return;
@@ -108,7 +112,8 @@ void handle_file_create(client_t *client, const char *buffer)
         int bytes_received;
 
         while (total_received < file_size &&
-               (bytes_received = recv(client->socket, buffer, sizeof(buffer), 0)) > 0)
+               (bytes_received =
+                    recv(client->socket, buffer, sizeof(buffer), 0)) > 0)
         {
             fwrite(buffer, 1, bytes_received, fp);
             total_received += bytes_received;
@@ -121,7 +126,8 @@ void handle_file_create(client_t *client, const char *buffer)
         }
         else
         {
-            if (db_create_file(file_name, file_size, parent_id, client->username))
+            if (db_create_file(file_name, file_size, parent_id,
+                               client->username))
             {
                 send_response(client->socket, 201, "File created successfully");
             }
@@ -563,10 +569,7 @@ void handle_file_download(client_t *client, const char *buffer)
 }
 
 // Check if file exists
-bool file_exists(const char *filename)
-{
-    return access(filename, F_OK) != -1;
-}
+bool file_exists(const char *filename) { return access(filename, F_OK) != -1; }
 
 // Create an empty file if it does not exist
 void create_empty_file_if_not_exists(const char *filename)

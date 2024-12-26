@@ -2,9 +2,9 @@
 #define FILE_HANDLER_H
 
 #include <json-c/json.h>
+#include <stdbool.h>
 
 #include "../../utils/structs.h"
-#include <stdbool.h>
 
 // Helper functions
 bool file_exists(const char *filename);
@@ -25,4 +25,4 @@ void handle_file_get_access(client_t *client, const char *buffer);
 // Search handlers
 void handle_file_search(client_t *client, const char *buffer);
 
-#endif // FILE_HANDLER_H
+#endif  // FILE_HANDLER_H

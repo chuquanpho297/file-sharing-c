@@ -126,9 +126,11 @@ void handle_folder_create(client_t *client, const char *buffer)
 
     char path[4096];
     if (folder_path && strlen(folder_path) > 0)
-        snprintf(path, sizeof(path), "root/%s/%s/%s", client->username, folder_path, folder_name);
+        snprintf(path, sizeof(path), "root/%s/%s/%s", client->username,
+                 folder_path, folder_name);
     else
-        snprintf(path, sizeof(path), "root/%s/%s", client->username, folder_name);
+        snprintf(path, sizeof(path), "root/%s/%s", client->username,
+                 folder_name);
 
     struct stat st = {0};
     if (stat(path, &st) == 0)
@@ -141,7 +143,8 @@ void handle_folder_create(client_t *client, const char *buffer)
         {
             if (db_create_folder(folder_name, parent_id, client->username))
             {
-                send_response(client->socket, 201, "Folder created successfully");
+                send_response(client->socket, 201,
+                              "Folder created successfully");
             }
             else
             {

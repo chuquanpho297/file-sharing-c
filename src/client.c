@@ -384,7 +384,7 @@ int main()
                 {
                     folder_path = strdup(temp_buffer);
                 }
-            } // Consume newline
+            }  // Consume newline
 
             handle_file_upload(sock, folder_path, file_path, jobj);
         }
@@ -1011,7 +1011,8 @@ void handle_file_upload(int sock, const char *folder_path,
             char answer[1];
             scanf("%s", answer);
             struct json_object *tmp = json_object_new_object();
-            json_object_object_add(tmp, "answer", json_object_new_string(answer));
+            json_object_object_add(tmp, "answer",
+                                   json_object_new_string(answer));
             const char *request = json_object_to_json_string(tmp);
             send(sock, request, strlen(request), 0);
             json_object_put(tmp);
@@ -1051,7 +1052,7 @@ void handle_file_upload(int sock, const char *folder_path,
             is_done = 1;
             printf("\nUploaded!\n");
         }
-        json_object_put(parsed_json); // Free the JSON object
+        json_object_put(parsed_json);  // Free the JSON object
     } while (!is_done);
 }
 
