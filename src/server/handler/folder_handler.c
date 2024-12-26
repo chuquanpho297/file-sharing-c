@@ -168,15 +168,16 @@ void handle_folder_upload(client_t *client, const char *buffer)
 {
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *folder_path_obj, *folder_name_obj,
-        *zip_folder_size_obj;
+        *file_number_obj;
 
     json_object_object_get_ex(parsed_json, "payload", &payload);
     json_object_object_get_ex(payload, "folderPath", &folder_path_obj);
     json_object_object_get_ex(payload, "folderName", &folder_name_obj);
+    json_object_object_get_ex(payload, "fileCount", &file_number_obj);
 
     char *folder_path = strdup(json_object_get_string(folder_path_obj));
     const char *folder_name = json_object_get_string(folder_name_obj);
-    long zip_folder_size = json_object_get_int64(zip_folder_size_obj);
+    int file_number = json_object_get_int(file_number_obj);
 
     char *path_copy = strdup(folder_path);
     char *token = strtok(path_copy, "/");
@@ -256,6 +257,45 @@ void handle_folder_upload(client_t *client, const char *buffer)
     const char *readyResponseStr = json_object_to_json_string(readyResponse);
     send(client->socket, readyResponseStr, strlen(readyResponseStr), 0);
 
+    // Receive files
+    int file_count = 0;
+    while (file_count < file_number)
+    {
+        char buffer[BUFFER_SIZE];
+        recv(client->socket, buffer, BUFFER_SIZE, 0);
+
+        struct json_object *file_info = json_tokener_parse(buffer);
+        struct json_object *file_path_obj, *file_size_obj;
+        json_object_object_get_ex(file_info, "filePath", &file_path_obj);
+        json_object_object_get_ex(file_info, "fileSize", &file_size_obj);
+        char *short_file_path = json_object_get_string(file_path_obj);
+        long file_size = json_object_get_int64(file_size_obj);
+
+        char *file_path[MAX_PATH_LENGTH];
+        snprintf(file_path, sizeof(file_path) + 1, "%s/%s",
+                 parent_upload_folder_path, short_file_path);
+
+        // Create directories if they do not exist
+        char *last_slash = strrchr(file_path, '/');
+        if (last_slash)
+        {
+            *last_slash = '\0';
+            create_directories(file_path);
+            *last_slash = '/';
+        }
+
+        FILE *file = fopen(file_path, "wb");
+
+        printf("Receiving file: %s\n", file_path);
+        receive_write_file(client->socket, file_size, file);
+        file_count++;
+        printf("File count: %d/%d\n", file_count, file_number);
+
+        json_object_put(file_info);
+    }
+
+    send_response(client->socket, 200, "Folder uploaded successfully");
+
     json_object_put(readyResponse);
     json_object_put(parsed_json);
     free(folder_path);
@@ -304,7 +344,7 @@ void handle_folder_download(client_t *client, const char *buffer)
              folder_owner, folder_path);
 
     // Check if temp_folder_path exists, if not, create it
-    const char *temp_folder_path = "temp";
+    const char *temp_folder_path = strcat("temp/", folder_owner);
     create_folder_if_not_exists(temp_folder_path);
     // TODO: check if zip folder name is duplicated, if yes, add version number
     // Zip the folder
@@ -316,7 +356,15 @@ void handle_folder_download(client_t *client, const char *buffer)
              folder_name);
     snprintf(temp_zip_folder_path, sizeof(temp_zip_folder_path) + 1, "%s/%s",
              temp_folder_path, temp_zip_folder_name);
-    compress_folder(exact_folder_path, temp_zip_folder_path);
+
+    if (!compress_folder(exact_folder_path, temp_zip_folder_path))
+    {
+        send_response(client->socket, 500, "Failed to compress folder");
+        json_object_put(parsed_json);
+        free(folder_path);
+        free(path_copy);
+        return;
+    }
 
     // Send the zip file
     FILE *fp = fopen(temp_zip_folder_path, "rb");
@@ -350,6 +398,7 @@ void handle_folder_download(client_t *client, const char *buffer)
         send_response(client->socket, 500, "Failed to download folder");
     }
 
+    json_object_put(parsed_json);
     free(folder_path);
     free(path_copy);
 }

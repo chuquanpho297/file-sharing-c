@@ -332,7 +332,8 @@ int main()
 
             printf("Enter folder path: ");
             scanf("%s", folder_path);
-            while (getchar() != '\n');  // Consume newline
+            while (getchar() != '\n')
+                ;  // Consume newline
             printf("Enter folder owner: ");
             scanf("%s", folder_owner);
             getchar();  // Consume newline
@@ -938,6 +939,9 @@ void handle_folder_upload_client(int sock, const char *des_folder_path,
         return;
     }
 
+    int file_count = count_files_in_folder(upload_folder_path);
+    printf("File count: %d\n", file_count);
+    return;
     const char *folder_name = get_folder_name(upload_folder_path);
     struct json_object *jpayload = json_object_new_object();
 
@@ -945,6 +949,8 @@ void handle_folder_upload_client(int sock, const char *des_folder_path,
                            json_object_new_string(folder_name));
     json_object_object_add(jpayload, "folderPath",
                            json_object_new_string(des_folder_path));
+    json_object_object_add(jpayload, "fileCount",
+                           json_object_new_int(file_count));
     json_object_object_add(jobj, "messageType",
                            json_object_new_string("FOLDER_UPLOAD"));
     json_object_object_add(jobj, "payload", jpayload);
@@ -1021,9 +1027,31 @@ void send_folder(int sock, const char *upload_folder_path,
         {
             snprintf(upload_path, sizeof(upload_path), "%s/%s",
                      upload_folder_path, entry->d_name);
-            json_object *jobj = json_object_new_object();
-            handle_file_upload_client(sock, des_folder_path, upload_path, jobj);
-            json_object_put(jobj);
+            snprintf(des_path, sizeof(des_path), "%s/%s", des_folder_path,
+                     entry->d_name);
+            FILE *file = fopen(upload_path, "rb");
+            if (!file)
+            {
+                printf("Failed to open file: %s\n", upload_path);
+                continue;
+            }
+
+            fseek(file, 0, SEEK_END);
+            long file_size = ftell(file);
+            fseek(file, 0, SEEK_SET);
+
+            struct json_object *jpayload = json_object_new_object();
+            json_object_object_add(jpayload, "filePath",
+                                   json_object_new_string(des_path));
+            json_object_object_add(jpayload, "fileSize",
+                                   json_object_new_int64(file_size));
+            char *jpayload_str = json_object_to_json_string(jpayload);
+
+            send(sock, jpayload_str, strlen(jpayload_str), 0);
+
+            read_send_file(sock, file_size, file);
+
+            json_object_put(jpayload);
         }
     }
 

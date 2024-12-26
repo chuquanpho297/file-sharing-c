@@ -152,14 +152,14 @@ void delete_folder(const char *src_path)
     rmdir(src_path);
 }
 
-void compress_folder(const char *folder_path, const char *zip_path)
+bool compress_folder(const char *folder_path, const char *zip_path)
 {
     int errorp;
     zip_t *zip = zip_open(zip_path, ZIP_CREATE | ZIP_TRUNCATE, &errorp);
     if (!zip)
     {
         printf("Failed to create ZIP file: %s\n", zip_path);
-        return;
+        return false;
     }
 
     const char *base_folder = strrchr(folder_path, '/');
@@ -172,19 +172,22 @@ void compress_folder(const char *folder_path, const char *zip_path)
         base_folder = folder_path;
     }
 
-    compress_folder_to_zip(zip, folder_path, base_folder);
+    bool result = compress_folder_to_zip(zip, folder_path, base_folder);
 
     zip_close(zip);
+
+    return result;
 }
 
-void compress_folder_to_zip(zip_t *zip, const char *folder_path,
+bool compress_folder_to_zip(zip_t *zip, const char *folder_path,
                             const char *base_folder)
 {
     DIR *dir = opendir(folder_path);
     if (!dir)
     {
         printf("Failed to open directory: %s\n", folder_path);
-        return;
+        closedir(dir);
+        return false;
     }
 
     struct dirent *entry;
@@ -204,7 +207,11 @@ void compress_folder_to_zip(zip_t *zip, const char *folder_path,
             snprintf(path, sizeof(path), "%s/%s", folder_path, entry->d_name);
             snprintf(zip_path, sizeof(zip_path), "%s/%s", base_folder,
                      entry->d_name);
-            compress_folder_to_zip(zip, path, zip_path);
+            if (!compress_folder_to_zip(zip, path, zip_path))
+            {
+                closedir(dir);
+                return false;
+            }
         }
         else
         {
@@ -240,11 +247,13 @@ void compress_folder_to_zip(zip_t *zip, const char *folder_path,
     }
 
     closedir(dir);
+
+    return true;
 }
 
 void create_directories(const char *path)
 {
-    char tmp[BUFFER_SIZE];
+    char tmp[MAX_PATH_LENGTH];
     snprintf(tmp, sizeof(tmp), "%s", path);
     size_t len = strlen(tmp);
     if (tmp[len - 1] == '/')
@@ -256,11 +265,19 @@ void create_directories(const char *path)
         if (*p == '/')
         {
             *p = 0;
-            mkdir(tmp, 0755);
+            struct stat st = {0};
+            if (stat(tmp, &st) == -1)
+            {
+                mkdir(tmp, 0755);
+            }
             *p = '/';
         }
     }
-    mkdir(tmp, 0755);
+    struct stat st = {0};
+    if (stat(tmp, &st) == -1)
+    {
+        mkdir(tmp, 0755);
+    }
 }
 
 void extract_zip(const char *zip_path, const char *dest_path)
@@ -425,4 +442,44 @@ void read_send_file(int socket, long file_size, FILE *fp)
         fflush(stdout);
     }
     fclose(fp);
+}
+
+int count_files_in_folder(const char *folder_path)
+{
+    int file_count = 0;
+    DIR *dir = opendir(folder_path);
+    if (!dir)
+    {
+        printf("Failed to open directory: %s\n", folder_path);
+        closedir(dir);
+        return -1;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_type == DT_REG)
+        {
+            file_count++;
+        }
+        else if (entry->d_type == DT_DIR)
+        {
+            if (strcmp(entry->d_name, ".") != 0 &&
+                strcmp(entry->d_name, "..") != 0)
+            {
+                char subfolder_path[MAX_PATH_LENGTH];
+                snprintf(subfolder_path, sizeof(subfolder_path), "%s/%s",
+                         folder_path, entry->d_name);
+                int subfolder_file_count =
+                    count_files_in_folder(subfolder_path);
+                if (subfolder_file_count != -1)
+                {
+                    file_count += subfolder_file_count;
+                }
+            }
+        }
+    }
+
+    closedir(dir);
+    return file_count;
 }
