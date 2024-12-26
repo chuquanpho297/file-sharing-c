@@ -1,4 +1,5 @@
 #include "client_utils.h"
+
 #include <arpa/inet.h>
 #include <json-c/json.h>
 #include <stdio.h>
@@ -17,7 +18,7 @@ void handle_print_payload_response(char *buffer,
     int response_code_int = json_object_get_int(response_code);
     print_func(response_code_int, payload);
 
-    json_object_put(parsed_json); // Free the JSON object
+    json_object_put(parsed_json);  // Free the JSON object
 }
 
 void print_message_oneline(int response_code, struct json_object *payload)
@@ -68,10 +69,10 @@ char *handle_response_chunk(int sock, int max_size)
 
 const char *get_filename(const char *path)
 {
-    const char *filename = strrchr(path, '/');
+    char *filename = strrchr(path, '/');
     if (filename == NULL)
     {
-        return path; // No '/' found, return the original path
+        return path;  // No '/' found, return the original path
     }
-    return filename + 1; // Skip the '/' character
+    return filename + 1;  // Skip the '/' character
 }

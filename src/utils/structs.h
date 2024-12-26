@@ -7,13 +7,15 @@
 #define BUFFER_SIZE 4096
 #define PORT 5555
 
-typedef struct {
+typedef struct
+{
     int socket;
     char username[MAX_USERNAME];
     int is_logged_in;
 } client_t;
 
-typedef struct {
+typedef struct
+{
     char* file_id;
     char* folder_id;
     char* file_name;
@@ -24,12 +26,14 @@ typedef struct {
     char* access;
 } FileStruct;
 
-typedef struct {
+typedef struct
+{
     FileStruct* files;
     int count;
 } FileList;
 
-typedef struct {
+typedef struct
+{
     char* folder_id;
     char* folder_name;
     char* created_by;
@@ -38,7 +42,8 @@ typedef struct {
     char* access;
 } FolderStruct;
 
-typedef struct {
+typedef struct
+{
     FolderStruct* folders;
     int count;
 } FolderList;

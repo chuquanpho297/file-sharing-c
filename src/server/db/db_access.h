@@ -16,7 +16,8 @@ bool db_login(const char *user_name, const char *password);
 
 // Folder operations
 bool db_create_root_folder(const char *user_name);
-bool db_create_folder(const char *folder_name, const char *parent_folder_id, const char *user_name);
+bool db_create_folder(const char *folder_name, const char *parent_folder_id,
+                      const char *user_name);
 char *db_get_root_folder_id(const char *user_name);
 char *db_get_folder_id(const char *folder_name, const char *user_name,
                        const char *parent_folder_id);
@@ -59,4 +60,4 @@ char *db_get_folder_access(const char *folder_id);
 // Add to existing functions
 char *db_get_file_id(const char *file_name, const char *parent_folder_id);
 
-#endif // DB_ACCESS_H
+#endif  // DB_ACCESS_H

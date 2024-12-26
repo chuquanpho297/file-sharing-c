@@ -161,7 +161,8 @@ bool db_create_file(const char *file_name, long file_size,
     return success;
 }
 
-bool db_create_folder(const char *folder_name, const char *parent_folder_id, const char *user_name)
+bool db_create_folder(const char *folder_name, const char *parent_folder_id,
+                      const char *user_name)
 {
     MYSQL *conn = db_connect();
     if (!conn)
@@ -171,8 +172,9 @@ bool db_create_folder(const char *folder_name, const char *parent_folder_id, con
     }
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT CreateFolder('%s', '%s', '%s') AS Success",
-             folder_name, parent_folder_id, user_name);
+    snprintf(query, sizeof(query),
+             "SELECT CreateFolder('%s', '%s', '%s') AS Success", folder_name,
+             parent_folder_id, user_name);
 
     if (mysql_query(conn, query))
     {

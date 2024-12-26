@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <json-c/json.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,8 +16,7 @@
 #define MAX_USERNAME 32
 #define MAX_PASSWORD 32
 #define MAX_FOLDER_NAME 32
-#define MAX_PATH_LENGTH 1024
-#define PATH_MAX 4096
+#define MAX_PATH_LENGTH 4096
 
 // Function prototypes
 void print_usage(void);
@@ -56,8 +56,11 @@ void handle_file_copy(int sock, const char *file_path, const char *to_folder,
 void handle_file_move(int sock, const char *file_path, const char *to_folder,
                       struct json_object *j);
 void handle_file_delete(int sock, const char *file_path, struct json_object *j);
+void handle_file_search(int sock, const char *file_name,
+                        struct json_object *jobj);
 void handle_logout(int sock, int *is_logged_in, char *current_user);
-void handle_file_search(int sock, const char *search_term, struct json_object *j);
+void handle_file_search(int sock, const char *search_term,
+                        struct json_object *j);
 const char *get_filename(const char *path);
 
 int main()
@@ -110,7 +113,7 @@ int main()
 
         // Get command from user
         fgets(command, MAX_COMMAND_LENGTH, stdin);
-        command[strcspn(command, "\n")] = 0; // Remove newline
+        command[strcspn(command, "\n")] = 0;  // Remove newline
         if (strcmp(command, "LOGOUT") == 0)
         {
             if (is_logged_in)
@@ -138,7 +141,7 @@ int main()
             scanf("%s", username);
             printf("Enter password: ");
             scanf("%s", password);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_login(sock, username, password, &is_logged_in, current_user,
                          jobj);
@@ -156,7 +159,7 @@ int main()
             scanf("%s", username);
             printf("Enter password: ");
             scanf("%s", password);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_register(sock, username, password, &is_logged_in,
                             current_user, jobj);
@@ -207,7 +210,7 @@ int main()
             // getchar(); // Consume newline
             printf("Enter folder name: ");
             scanf("%s", folder_name);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_folder_create(sock, folder_path, folder_name, jobj);
         }
@@ -225,10 +228,10 @@ int main()
             char new_name[MAX_FOLDER_NAME];
             printf("Enter folder path: ");
             scanf("%s", folder_path);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
             printf("Enter new name: ");
             scanf("%s", new_name);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_folder_rename(sock, folder_path, new_name, jobj);
         }
@@ -246,10 +249,10 @@ int main()
             char to_folder[MAX_PATH_LENGTH];
             printf("From folder: ");
             scanf("%s", from_folder);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
             printf("To folder: ");
             scanf("%s", to_folder);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_folder_copy(sock, from_folder, to_folder, jobj);
         }
@@ -267,10 +270,10 @@ int main()
             char to_folder[MAX_PATH_LENGTH];
             printf("From folder: ");
             scanf("%s", from_folder);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
             printf("To folder: ");
             scanf("%s", to_folder);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_folder_move(sock, from_folder, to_folder, jobj);
         }
@@ -287,7 +290,7 @@ int main()
             char folder_path[MAX_PATH_LENGTH];
             printf("Enter folder path: ");
             scanf("%s", folder_path);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_folder_delete(sock, folder_path, jobj);
         }
@@ -304,7 +307,7 @@ int main()
             char search_term[MAX_FOLDER_NAME];
             printf("Enter search term: ");
             scanf("%s", search_term);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_folder_search(sock, search_term, jobj);
         }
@@ -322,10 +325,11 @@ int main()
             char folder_owner[MAX_USERNAME];
             printf("Enter folder path: ");
             scanf("%s", folder_path);
-            getchar(); // Consume newline
+            while (getchar() != '\n')
+                ;  // Consume newline
             printf("Enter folder owner: ");
             scanf("%s", folder_owner);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_folder_download(sock, folder_path, folder_owner, jobj);
         }
@@ -339,16 +343,16 @@ int main()
                 continue;
             }
 
-            char folder_path[MAX_PATH_LENGTH];
-            char folder_name[MAX_FOLDER_NAME];
+            char des_folder_path[MAX_PATH_LENGTH];
+            char folder_path[MAX_FOLDER_NAME];
+            printf("Enter destination folder path: ");
+            scanf("%s", des_folder_path);
+            getchar();  // Consume newline
             printf("Enter folder path: ");
             scanf("%s", folder_path);
-            getchar(); // Consume newline
-            printf("Enter folder name: ");
-            scanf("%s", folder_name);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
-            handle_folder_upload(sock, folder_path, folder_name, jobj);
+            handle_folder_upload(sock, des_folder_path, folder_path, jobj);
         }
         else if (strcmp(command, "FILE_UPLOAD") == 0)
         {
@@ -363,12 +367,12 @@ int main()
             char file_path[MAX_PATH_LENGTH];
             printf("Enter file path: ");
             scanf("%s", file_path);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             char folder_path[MAX_PATH_LENGTH];
             printf("Upload at folder: ");
             scanf("%s", folder_path);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_file_upload(sock, folder_path, file_path, jobj);
         }
@@ -386,10 +390,10 @@ int main()
             char file_owner[MAX_USERNAME];
             printf("Enter file path: ");
             scanf("%s", file_path);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
             printf("Enter file owner: ");
             scanf("%s", file_owner);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_file_download(sock, file_path, file_owner, jobj);
         }
@@ -407,10 +411,10 @@ int main()
             char new_name[MAX_COMMAND_LENGTH];
             printf("Enter file path: ");
             scanf("%s", file_path);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
             printf("Enter new name: ");
             scanf("%s", new_name);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_file_rename(sock, file_path, new_name, jobj);
         }
@@ -428,10 +432,10 @@ int main()
             char to_folder[MAX_PATH_LENGTH];
             printf("Enter file path: ");
             scanf("%s", file_path);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
             printf("To folder: ");
             scanf("%s", to_folder);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_file_copy(sock, file_path, to_folder, jobj);
         }
@@ -449,10 +453,10 @@ int main()
             char to_folder[MAX_PATH_LENGTH];
             printf("Enter file path: ");
             scanf("%s", file_path);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
             printf("To folder: ");
             scanf("%s", to_folder);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_file_move(sock, file_path, to_folder, jobj);
         }
@@ -469,7 +473,7 @@ int main()
             char file_path[MAX_PATH_LENGTH];
             printf("Enter file path: ");
             scanf("%s", file_path);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_file_delete(sock, file_path, jobj);
         }
@@ -486,7 +490,7 @@ int main()
             char search_term[MAX_COMMAND_LENGTH];
             printf("Enter search term: ");
             scanf("%s", search_term);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             handle_file_search(sock, search_term, jobj);
         }
@@ -494,7 +498,7 @@ int main()
         {
             printf("Command not recognized!\n");
             printf("Use command \"HELP\" to show the usage!\n");
-            json_object_put(jobj); // Free the JSON object
+            json_object_put(jobj);  // Free the JSON object
         }
     }
 
@@ -519,7 +523,7 @@ void handle_login(int sock, const char *username, const char *password,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -542,7 +546,7 @@ void handle_login(int sock, const char *username, const char *password,
         strncpy(current_user, username, MAX_USERNAME - 1);
     }
 
-    json_object_put(parsed_json); // Free the JSON object
+    json_object_put(parsed_json);  // Free the JSON object
 }
 
 void handle_register(int sock, const char *username, const char *password,
@@ -562,7 +566,7 @@ void handle_register(int sock, const char *username, const char *password,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -585,7 +589,7 @@ void handle_register(int sock, const char *username, const char *password,
         strncpy(current_user, username, MAX_USERNAME - 1);
     }
 
-    json_object_put(parsed_json); // Free the JSON object
+    json_object_put(parsed_json);  // Free the JSON object
 }
 
 void handle_logout(int sock, int *is_logged_in, char *current_user)
@@ -596,7 +600,7 @@ void handle_logout(int sock, int *is_logged_in, char *current_user)
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
     recv(sock, buffer, BUFFER_SIZE, 0);
@@ -689,7 +693,7 @@ void handle_folder_create(int sock, const char *folder_path,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -715,7 +719,7 @@ void handle_folder_rename(int sock, const char *folder_path,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -741,7 +745,7 @@ void handle_folder_copy(int sock, const char *from_folder,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -767,7 +771,7 @@ void handle_folder_move(int sock, const char *from_folder,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -791,7 +795,7 @@ void handle_folder_delete(int sock, const char *folder_path,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -815,7 +819,7 @@ void handle_folder_search(int sock, const char *folder_name,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     // Check response
     char *response = handle_response_chunk(sock, BUFFER_SIZE);
@@ -824,8 +828,7 @@ void handle_folder_search(int sock, const char *folder_name,
 }
 
 void handle_folder_download(int sock, const char *folder_path,
-                            const char *folder_owner,
-                            struct json_object *jobj)
+                            const char *folder_owner, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
@@ -840,7 +843,7 @@ void handle_folder_download(int sock, const char *folder_path,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -850,15 +853,16 @@ void handle_folder_download(int sock, const char *folder_path,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_folder_upload(int sock, const char *folder_path,
-                          const char *folder_name, struct json_object *jobj)
+void handle_folder_upload(int sock, const char *des_folder_path,
+                          const char *folder_path, struct json_object *jobj)
 {
+    const char *folder_name = get_filename(folder_path);
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jpayload, "folderName",
                            json_object_new_string(folder_name));
     json_object_object_add(jpayload, "folderPath",
-                           json_object_new_string(folder_path));
+                           json_object_new_string(des_folder_path));
     json_object_object_add(jobj, "messageType",
                            json_object_new_string("FOLDER_UPLOAD"));
     json_object_object_add(jobj, "payload", jpayload);
@@ -866,12 +870,77 @@ void handle_folder_upload(int sock, const char *folder_path,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
     recv(sock, buffer, BUFFER_SIZE, 0);
 
+    struct json_object *parsed_json;
+    struct json_object *response_code;
+
+    parsed_json = json_tokener_parse(buffer);
+    json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+    int response_code_int = json_object_get_int(response_code);
+    if (response_code_int == 200)
+    {
+        // TODO: send folder content
+    }
+
     handle_print_payload_response(buffer, print_message_oneline);
+}
+
+void send_folder(int sock, const char *folder_path)
+{
+    DIR *dir = opendir(folder_path);
+    if (!dir)
+    {
+        printf("Failed to open directory: %s\n", folder_path);
+        return;
+    }
+
+    struct dirent *entry;
+    char path[BUFFER_SIZE];
+
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_type == DT_DIR)
+        {
+            if (strcmp(entry->d_name, ".") == 0 ||
+                strcmp(entry->d_name, "..") == 0)
+            {
+                continue;
+            }
+            snprintf(path, sizeof(path), "%s/%s", folder_path, entry->d_name);
+            send_folder(sock, path);
+        }
+        else
+        {
+            snprintf(path, sizeof(path), "%s/%s", folder_path, entry->d_name);
+            send_file(sock, path);
+        }
+    }
+
+    closedir(dir);
+}
+
+void send_file(int sock, const char *file_path)
+{
+    FILE *file = fopen(file_path, "rb");
+    if (!file)
+    {
+        printf("Source file path does not exist!!!\n");
+        return;
+    }
+
+    char buffer[BUFFER_SIZE];
+    int bytes_read;
+
+    while ((bytes_read = fread(buffer, 1, BUFFER_SIZE, file)) > 0)
+    {
+        send(sock, buffer, bytes_read, 0);
+    }
+
+    fclose(file);
 }
 
 void handle_file_upload(int sock, const char *folder_path,
@@ -903,7 +972,7 @@ void handle_file_upload(int sock, const char *folder_path,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
     recv(sock, buffer, BUFFER_SIZE, 0);
@@ -933,7 +1002,7 @@ void handle_file_upload(int sock, const char *folder_path,
         printf("\nUploaded!\n");
     }
 
-    json_object_put(parsed_json); // Free the JSON object
+    json_object_put(parsed_json);  // Free the JSON object
 }
 
 void handle_file_download(int sock, const char *file_path,
@@ -952,7 +1021,7 @@ void handle_file_download(int sock, const char *file_path,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
     recv(sock, buffer, BUFFER_SIZE, 0);
@@ -973,14 +1042,14 @@ void handle_file_download(int sock, const char *file_path,
         struct json_object *file_size_obj;
         json_object_object_get_ex(payload, "fileSize", &file_size_obj);
         long file_size = json_object_get_int64(file_size_obj);
-        json_object_put(parsed_json); // Free the JSON object
+        json_object_put(parsed_json);  // Free the JSON object
 
         if (file_size != 0)
         {
             char path[MAX_PATH_LENGTH];
             printf("Input destination path: ");
             scanf("%s", path);
-            getchar(); // Consume newline
+            getchar();  // Consume newline
 
             struct stat st = {0};
             if (stat(path, &st) == -1)
@@ -988,7 +1057,7 @@ void handle_file_download(int sock, const char *file_path,
                 mkdir(path, 0777);
             }
 
-            char des_path[PATH_MAX];
+            char des_path[MAX_PATH_LENGTH];
             const char *file_name = get_filename(file_path);
             snprintf(des_path, sizeof(des_path), "%s/%s", path, file_name);
 
@@ -1031,7 +1100,7 @@ void handle_file_rename(int sock, const char *file_path, const char *new_name,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -1057,7 +1126,7 @@ void handle_file_copy(int sock, const char *file_path, const char *to_folder,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -1083,7 +1152,7 @@ void handle_file_move(int sock, const char *file_path, const char *to_folder,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 
@@ -1107,7 +1176,7 @@ void handle_file_delete(int sock, const char *file_path,
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
-    json_object_put(jobj); // Free the JSON object
+    json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
 

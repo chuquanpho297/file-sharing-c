@@ -11,7 +11,8 @@
 #include "../../utils/structs.h"
 #include "../db/db_access.h"
 
-void handle_file_create(client_t *client, const char *buffer) {
+void handle_file_create(client_t *client, const char *buffer)
+{
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_name_obj, *file_size_obj,
         *folder_path_obj;
@@ -27,10 +28,12 @@ void handle_file_create(client_t *client, const char *buffer) {
     char *parent_id = db_get_root_folder_id(client->username);
     char *folder_name = NULL;
 
-    while (token != NULL) {
+    while (token != NULL)
+    {
         folder_name = token;
         parent_id = db_get_folder_id(folder_name, client->username, parent_id);
-        if (parent_id == NULL) {
+        if (parent_id == NULL)
+        {
             send_response(client->socket, 404, "Folder not found");
             json_object_put(parsed_json);
             return;
@@ -38,16 +41,20 @@ void handle_file_create(client_t *client, const char *buffer) {
         token = strtok(NULL, "/");
     }
 
-    if (db_create_file(file_name, file_size, parent_id, client->username)) {
+    if (db_create_file(file_name, file_size, parent_id, client->username))
+    {
         send_response(client->socket, 201, "File created successfully");
-    } else {
+    }
+    else
+    {
         send_response(client->socket, 500, "Failed to create file");
     }
 
     json_object_put(parsed_json);
 }
 
-void handle_file_copy(client_t *client, const char *buffer) {
+void handle_file_copy(client_t *client, const char *buffer)
+{
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_path_obj, *to_folder_obj;
 
@@ -63,19 +70,25 @@ void handle_file_copy(client_t *client, const char *buffer) {
     char *file_id = NULL;
     char *file_name = NULL;
 
-    while (token != NULL) {
+    while (token != NULL)
+    {
         file_name = token;
         token = strtok(NULL, "/");
-        if (token == NULL) {
+        if (token == NULL)
+        {
             file_id = db_get_file_id(file_name, parent_id);
-            if (file_id == NULL) {
+            if (file_id == NULL)
+            {
                 send_response(client->socket, 404, "File not found");
                 json_object_put(parsed_json);
                 return;
             }
-        } else {
+        }
+        else
+        {
             parent_id = db_get_folder_id(token, client->username, parent_id);
-            if (parent_id == NULL) {
+            if (parent_id == NULL)
+            {
                 send_response(client->socket, 404, "Folder not found");
                 json_object_put(parsed_json);
                 return;
@@ -85,25 +98,31 @@ void handle_file_copy(client_t *client, const char *buffer) {
 
     token = strtok((char *)to_folder, "/");
     char *to_folder_id = db_get_root_folder_id(client->username);
-    while (token != NULL) {
+    while (token != NULL)
+    {
         to_folder_id = db_get_folder_id(token, client->username, to_folder_id);
-        if (to_folder_id == NULL) {
+        if (to_folder_id == NULL)
+        {
             send_response(client->socket, 404, "Folder not found");
             json_object_put(parsed_json);
             return;
         }
         token = strtok(NULL, "/");
     }
-    if (db_copy_file(file_id, to_folder_id)) {
+    if (db_copy_file(file_id, to_folder_id))
+    {
         send_response(client->socket, 200, "File copied successfully");
-    } else {
+    }
+    else
+    {
         send_response(client->socket, 500, "Failed to copy file");
     }
 
     json_object_put(parsed_json);
 }
 
-void handle_file_move(client_t *client, const char *buffer) {
+void handle_file_move(client_t *client, const char *buffer)
+{
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_path_obj, *to_folder_obj;
 
@@ -119,19 +138,25 @@ void handle_file_move(client_t *client, const char *buffer) {
     char *file_id = NULL;
     char *file_name = NULL;
 
-    while (token != NULL) {
+    while (token != NULL)
+    {
         file_name = token;
         token = strtok(NULL, "/");
-        if (token == NULL) {
+        if (token == NULL)
+        {
             file_id = db_get_file_id(file_name, parent_id);
-            if (file_id == NULL) {
+            if (file_id == NULL)
+            {
                 send_response(client->socket, 404, "File not found");
                 json_object_put(parsed_json);
                 return;
             }
-        } else {
+        }
+        else
+        {
             parent_id = db_get_folder_id(token, client->username, parent_id);
-            if (parent_id == NULL) {
+            if (parent_id == NULL)
+            {
                 send_response(client->socket, 404, "Folder not found");
                 json_object_put(parsed_json);
                 return;
@@ -140,9 +165,11 @@ void handle_file_move(client_t *client, const char *buffer) {
     }
     token = strtok((char *)to_folder, "/");
     char *to_folder_id = db_get_root_folder_id(client->username);
-    while (token != NULL) {
+    while (token != NULL)
+    {
         to_folder_id = db_get_folder_id(token, client->username, to_folder_id);
-        if (to_folder_id == NULL) {
+        if (to_folder_id == NULL)
+        {
             send_response(client->socket, 404, "Folder not found");
             json_object_put(parsed_json);
             return;
@@ -150,16 +177,20 @@ void handle_file_move(client_t *client, const char *buffer) {
         token = strtok(NULL, "/");
     }
 
-    if (db_move_file(file_id, to_folder_id)) {
+    if (db_move_file(file_id, to_folder_id))
+    {
         send_response(client->socket, 200, "File moved successfully");
-    } else {
+    }
+    else
+    {
         send_response(client->socket, 500, "Failed to move file");
     }
 
     json_object_put(parsed_json);
 }
 
-void handle_file_rename(client_t *client, const char *buffer) {
+void handle_file_rename(client_t *client, const char *buffer)
+{
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_path_obj, *new_name_obj;
 
@@ -175,35 +206,45 @@ void handle_file_rename(client_t *client, const char *buffer) {
     char *file_id = NULL;
     char *file_name = NULL;
 
-    while (token != NULL) {
+    while (token != NULL)
+    {
         file_name = token;
         token = strtok(NULL, "/");
-        if (token == NULL) {
+        if (token == NULL)
+        {
             file_id = db_get_file_id(file_name, parent_id);
-            if (file_id == NULL) {
+            if (file_id == NULL)
+            {
                 send_response(client->socket, 404, "File not found");
                 json_object_put(parsed_json);
                 return;
             }
-        } else {
+        }
+        else
+        {
             parent_id = db_get_folder_id(token, client->username, parent_id);
-            if (parent_id == NULL) {
+            if (parent_id == NULL)
+            {
                 send_response(client->socket, 404, "Folder not found");
                 json_object_put(parsed_json);
                 return;
             }
         }
     }
-    if (db_rename_file(file_id, new_name)) {
+    if (db_rename_file(file_id, new_name))
+    {
         send_response(client->socket, 200, "File renamed successfully");
-    } else {
+    }
+    else
+    {
         send_response(client->socket, 500, "Failed to rename file");
     }
 
     json_object_put(parsed_json);
 }
 
-void handle_file_delete(client_t *client, const char *buffer) {
+void handle_file_delete(client_t *client, const char *buffer)
+{
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_path_obj;
 
@@ -216,35 +257,45 @@ void handle_file_delete(client_t *client, const char *buffer) {
     char *file_id = NULL;
     char *file_name = NULL;
 
-    while (token != NULL) {
+    while (token != NULL)
+    {
         file_name = token;
         token = strtok(NULL, "/");
-        if (token == NULL) {
+        if (token == NULL)
+        {
             file_id = db_get_file_id(file_name, parent_id);
-            if (file_id == NULL) {
+            if (file_id == NULL)
+            {
                 send_response(client->socket, 404, "File not found");
                 json_object_put(parsed_json);
                 return;
             }
-        } else {
+        }
+        else
+        {
             parent_id = db_get_folder_id(token, client->username, parent_id);
-            if (parent_id == NULL) {
+            if (parent_id == NULL)
+            {
                 send_response(client->socket, 404, "Folder not found");
                 json_object_put(parsed_json);
                 return;
             }
         }
     }
-    if (db_delete_file(file_id)) {
+    if (db_delete_file(file_id))
+    {
         send_response(client->socket, 200, "File deleted successfully");
-    } else {
+    }
+    else
+    {
         send_response(client->socket, 500, "Failed to delete file");
     }
 
     json_object_put(parsed_json);
 }
 
-void handle_file_set_access(client_t *client, const char *buffer) {
+void handle_file_set_access(client_t *client, const char *buffer)
+{
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_id_obj, *access_obj;
 
@@ -255,16 +306,20 @@ void handle_file_set_access(client_t *client, const char *buffer) {
     const char *file_id = json_object_get_string(file_id_obj);
     const char *access = json_object_get_string(access_obj);
 
-    if (db_set_file_access(file_id, access)) {
+    if (db_set_file_access(file_id, access))
+    {
         send_response(client->socket, 200, "File access updated successfully");
-    } else {
+    }
+    else
+    {
         send_response(client->socket, 500, "Failed to update file access");
     }
 
     json_object_put(parsed_json);
 }
 
-void handle_file_get_access(client_t *client, const char *buffer) {
+void handle_file_get_access(client_t *client, const char *buffer)
+{
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_id_obj;
 
@@ -274,7 +329,8 @@ void handle_file_get_access(client_t *client, const char *buffer) {
     const char *file_id = json_object_get_string(file_id_obj);
     char *access = db_get_file_access(file_id);
 
-    if (access) {
+    if (access)
+    {
         struct json_object *response = json_object_new_object();
         struct json_object *resp_payload = json_object_new_object();
 
@@ -289,14 +345,17 @@ void handle_file_get_access(client_t *client, const char *buffer) {
 
         json_object_put(response);
         free(access);
-    } else {
+    }
+    else
+    {
         send_response(client->socket, 500, "Failed to get file access");
     }
 
     json_object_put(parsed_json);
 }
 
-void handle_file_search(client_t *client, const char *buffer) {
+void handle_file_search(client_t *client, const char *buffer)
+{
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *search_term_obj;
 
@@ -306,12 +365,14 @@ void handle_file_search(client_t *client, const char *buffer) {
     const char *search_term = json_object_get_string(search_term_obj);
     FileList *files = db_search_file(search_term);
 
-    if (files) {
+    if (files)
+    {
         struct json_object *response = json_object_new_object();
         struct json_object *resp_payload = json_object_new_object();
         struct json_object *files_array = json_object_new_array();
 
-        for (int i = 0; i < files->count; i++) {
+        for (int i = 0; i < files->count; i++)
+        {
             struct json_object *file = json_object_new_object();
             json_object_object_add(
                 file, "fileId",
@@ -337,14 +398,17 @@ void handle_file_search(client_t *client, const char *buffer) {
 
         json_object_put(response);
         free_file_list(files);
-    } else {
+    }
+    else
+    {
         send_response(client->socket, 500, "Failed to search files");
     }
 
     json_object_put(parsed_json);
 }
 
-void handle_file_download(client_t *client, const char *buffer) {
+void handle_file_download(client_t *client, const char *buffer)
+{
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_path_obj, *file_owner_obj;
 
@@ -362,24 +426,31 @@ void handle_file_download(client_t *client, const char *buffer) {
     char *file_id = NULL;
     char *file_name = NULL;
 
-    while (token != NULL) {
+    while (token != NULL)
+    {
         file_name = token;
         token = strtok(NULL, "/");
-        if (token == NULL) {
+        if (token == NULL)
+        {
             file_id = db_get_file_id(file_name, parent_id);
-            if (file_id == NULL) {
+            if (file_id == NULL)
+            {
                 send_response(client->socket, 404, "File not found");
                 json_object_put(parsed_json);
                 return;
             }
-            if (strcmp(db_get_file_access(file_id), "download") == 0) {
+            if (strcmp(db_get_file_access(file_id), "download") == 0)
+            {
                 send_response(client->socket, 403, "File access denied");
                 json_object_put(parsed_json);
                 return;
             }
-        } else {
+        }
+        else
+        {
             parent_id = db_get_folder_id(token, file_owner, parent_id);
-            if (parent_id == NULL) {
+            if (parent_id == NULL)
+            {
                 send_response(client->socket, 404, "Folder not found");
                 json_object_put(parsed_json);
                 return;

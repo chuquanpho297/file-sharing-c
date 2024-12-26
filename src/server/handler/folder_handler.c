@@ -1,8 +1,8 @@
 #include "folder_handler.h"
-#include <arpa/inet.h>
-#include <json-c/json.h>
 
+#include <arpa/inet.h>
 #include <dirent.h>
+#include <json-c/json.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -107,7 +107,8 @@ void handle_folder_create(client_t *client, const char *buffer)
         while (token != NULL)
         {
             parent_folder = token;
-            char *new_parent_id = db_get_folder_id(parent_folder, client->username, parent_id);
+            char *new_parent_id =
+                db_get_folder_id(parent_folder, client->username, parent_id);
             free(parent_id);
             parent_id = new_parent_id;
 
@@ -320,8 +321,7 @@ void handle_folder_copy(client_t *client, const char *buffer)
         }
         path_copy = strtok(NULL, "/");
     }
-    if (db_check_folder_exist(to_folder_name, client->username,
-                              to_folder_id))
+    if (db_check_folder_exist(to_folder_name, client->username, to_folder_id))
     {
         send_response(client->socket, 500, "Folder already exists");
         json_object_put(parsed_json);
@@ -390,8 +390,7 @@ void handle_folder_move(client_t *client, const char *buffer)
         path_copy = strtok(NULL, "/");
     }
 
-    if (db_check_folder_exist(to_folder_name, client->username,
-                              to_folder_id))
+    if (db_check_folder_exist(to_folder_name, client->username, to_folder_id))
     {
         send_response(client->socket, 500, "Folder already exists");
         json_object_put(parsed_json);

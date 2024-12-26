@@ -26,7 +26,8 @@ const unsigned int port = DB_PORT;
 // Function prototypes
 void *handle_client(void *arg);
 
-int main() {
+int main()
+{
     int server_fd;
     struct sockaddr_in address;
     int opt = 1;
@@ -35,13 +36,15 @@ int main() {
     int client_count = 0;
 
     // Create socket
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+    {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
 
     // Set socket options
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
+    {
         perror("setsockopt failed");
         exit(EXIT_FAILURE);
     }
@@ -51,13 +54,15 @@ int main() {
     address.sin_port = htons(PORT);
 
     // Bind socket
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
+    {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
 
     // Listen for connections
-    if (listen(server_fd, 3) < 0) {
+    if (listen(server_fd, 3) < 0)
+    {
         perror("listen failed");
         exit(EXIT_FAILURE);
     }
@@ -65,12 +70,14 @@ int main() {
     printf("Server listening on port %d...\n", PORT);
 
     // Accept and handle client connections
-    while (1) {
+    while (1)
+    {
         client_t *client = malloc(sizeof(client_t));
         client->is_logged_in = 0;
 
         if ((client->socket = accept(server_fd, (struct sockaddr *)&address,
-                                     (socklen_t *)&addrlen)) < 0) {
+                                     (socklen_t *)&addrlen)) < 0)
+        {
             perror("accept failed");
             free(client);
             continue;
@@ -78,7 +85,8 @@ int main() {
 
         // Create new thread for client
         if (pthread_create(&tid[client_count++], NULL, handle_client,
-                           (void *)client) != 0) {
+                           (void *)client) != 0)
+        {
             perror("Failed to create thread");
             close(client->socket);
             free(client);
@@ -86,7 +94,8 @@ int main() {
         }
 
         // Limit check
-        if (client_count >= MAX_CLIENTS) {
+        if (client_count >= MAX_CLIENTS)
+        {
             printf("Max clients reached. Waiting for some to disconnect...\n");
             pthread_join(tid[0], NULL);
             client_count--;
@@ -96,14 +105,15 @@ int main() {
     return 0;
 }
 
-void *handle_client(void *arg) {
+void *handle_client(void *arg)
+{
     client_t *client = (client_t *)arg;
     char buffer[BUFFER_SIZE];
     int read_size;
 
-    while ((read_size = recv(client->socket, buffer, BUFFER_SIZE, 0)) > 0) {
+    while ((read_size = recv(client->socket, buffer, BUFFER_SIZE, 0)) > 0)
+    {
         buffer[read_size] = '\0';
-
         struct json_object *parsed_json = json_tokener_parse(buffer);
         struct json_object *message_type;
 
@@ -112,54 +122,93 @@ void *handle_client(void *arg) {
 
         printf("Request from client: %s\n", buffer);
 
-        if (!client->is_logged_in) {
-            if (strcmp(type, "LOGIN") == 0) {
+        if (!client->is_logged_in)
+        {
+            if (strcmp(type, "LOGIN") == 0)
+            {
                 handle_login(client, buffer);
-            } else if (strcmp(type, "REGISTER") == 0) {
+            }
+            else if (strcmp(type, "REGISTER") == 0)
+            {
                 handle_register(client, buffer);
-            } else
+            }
+            else
                 send_response(client->socket, 401, "Unauthorized");
-        } else {
+        }
+        else
+        {
             // Folder operations
             // TODO: Add FOLDER_CONTENT handler
-            if (strcmp(type, "FOLDER_CREATE") == 0) {
+            if (strcmp(type, "FOLDER_CREATE") == 0)
+            {
                 handle_folder_create(client, buffer);
-            } else if (strcmp(type, "FOLDER_RENAME") == 0) {
+            }
+            else if (strcmp(type, "FOLDER_RENAME") == 0)
+            {
                 handle_folder_rename(client, buffer);
-            } else if (strcmp(type, "FOLDER_COPY") == 0) {
+            }
+            else if (strcmp(type, "FOLDER_COPY") == 0)
+            {
                 handle_folder_copy(client, buffer);
-            } else if (strcmp(type, "FOLDER_MOVE") == 0) {
+            }
+            else if (strcmp(type, "FOLDER_MOVE") == 0)
+            {
                 handle_folder_move(client, buffer);
-            } else if (strcmp(type, "FOLDER_DELETE") == 0) {
+            }
+            else if (strcmp(type, "FOLDER_DELETE") == 0)
+            {
                 handle_folder_delete(client, buffer);
-            } else if (strcmp(type, "FOLDER_SEARCH") == 0) {
+            }
+            else if (strcmp(type, "FOLDER_SEARCH") == 0)
+            {
                 handle_folder_search(client, buffer);
-            } else if (strcmp(type, "FOLDER_DOWNLOAD") == 0) {
+            }
+            else if (strcmp(type, "FOLDER_DOWNLOAD") == 0)
+            {
                 handle_folder_download(client, buffer);
-            } else if (strcmp(type, "FOLDER_UPLOAD") == 0) {
+            }
+            else if (strcmp(type, "FOLDER_UPLOAD") == 0)
+            {
                 handle_folder_upload(client, buffer);
             }
             // File operations
             // TODO: missing add upload file handler
-            else if (strcmp(type, "FILE_UPLOAD") == 0) {
+            else if (strcmp(type, "FILE_UPLOAD") == 0)
+            {
                 handle_file_create(client, buffer);
-            } else if (strcmp(type, "FILE_DOWNLOAD") == 0) {
+            }
+            else if (strcmp(type, "FILE_DOWNLOAD") == 0)
+            {
                 handle_file_download(client, buffer);
-            } else if (strcmp(type, "FILE_RENAME") == 0) {
+            }
+            else if (strcmp(type, "FILE_RENAME") == 0)
+            {
                 handle_file_rename(client, buffer);
-            } else if (strcmp(type, "FILE_COPY") == 0) {
+            }
+            else if (strcmp(type, "FILE_COPY") == 0)
+            {
                 handle_file_copy(client, buffer);
-            } else if (strcmp(type, "FILE_MOVE") == 0) {
+            }
+            else if (strcmp(type, "FILE_MOVE") == 0)
+            {
                 handle_file_move(client, buffer);
-            } else if (strcmp(type, "FILE_DELETE") == 0) {
+            }
+            else if (strcmp(type, "FILE_DELETE") == 0)
+            {
                 handle_file_delete(client, buffer);
-            } else if (strcmp(type, "FILE_SEARCH") == 0) {
+            }
+            else if (strcmp(type, "FILE_SEARCH") == 0)
+            {
                 handle_file_search(client, buffer);
-            } else if (strcmp(type, "LOGOUT") == 0) {
+            }
+            else if (strcmp(type, "LOGOUT") == 0)
+            {
                 client->is_logged_in = 0;
                 client->username[0] = '\0';
                 send_response(client->socket, 200, "Logged out");
-            } else {
+            }
+            else
+            {
                 send_response(client->socket, 404, "Invalid request");
             }
         }
