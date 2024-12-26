@@ -23,7 +23,7 @@ add_executable(server
     src/utils/helper.c
     src/utils/structs.c
 )
-add_executable(client src/client.c src/utils/client_utils.c src/server/system/system_access.c)
+add_executable(client src/client.c src/utils/helper.c src/server/system/system_access.c)
 
 add_executable(test src/test.c)
 

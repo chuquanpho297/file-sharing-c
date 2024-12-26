@@ -344,3 +344,30 @@ void create_folder_if_not_exists(const char *folder_path)
         mkdir(folder_path, 0777);
     }
 }
+
+const char *get_filename(const char *path)
+{
+    char *filename = strrchr(path, '/');
+    if (filename == NULL)
+    {
+        return path;  // No '/' found, return the original path
+    }
+    return filename + 1;  // Skip the '/' character
+}
+
+const char *get_folder_name(const char *path)
+{
+    size_t len = strlen(path);
+    if (len > 1 && path[len - 1] == '/')
+    {
+        path = strndup(path, len - 1);
+    }
+
+    const char *last_slash = strrchr(path, '/');
+    if (last_slash == NULL)
+    {
+        return path;
+    }
+
+    return last_slash + 1;
+}

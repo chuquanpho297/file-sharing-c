@@ -28,5 +28,7 @@ void create_directories(const char *path);
 void extract_zip(const char *zip_path, const char *dest_path);
 bool is_folder_exist(const char *folder_path);
 void create_folder_if_not_exists(const char *folder_path);
+const char *get_filename(const char *path);
+const char *get_folder_name(const char *path);
 
 #endif  // SYSTEM_ACCESS_H
