@@ -46,15 +46,15 @@ void handle_file_create(client_t *client, const char *buffer)
         }
     }
 
-    char path[4096];
-    char file_path[4096];
+    char path[MAX_PATH_LENGTH];
+    char file_path[MAX_PATH_LENGTH];
     snprintf(path, sizeof(path), "root/%s/%s", client->username, folder_path);
     mkdir(path, 0777);
 
     // Calculate required space
     size_t required_len =
         strlen(path) + strlen(file_name) + 2;  // +2 for '/' and null terminator
-    if (required_len > 4096)
+    if (required_len > MAX_PATH_LENGTH)
     {
         send_response(client->socket, 400, "Path too long");
         json_object_put(parsed_json);
@@ -108,19 +108,7 @@ void handle_file_create(client_t *client, const char *buffer)
     FILE *fp = fopen(file_path, "wb");
     if (fp != NULL)
     {
-        char buffer[BUFFER_SIZE];
-        long total_received = 0;
-        int bytes_received;
-
-        while (total_received < file_size &&
-               (bytes_received =
-                    recv(client->socket, buffer, sizeof(buffer), 0)) > 0)
-        {
-            fwrite(buffer, 1, bytes_received, fp);
-            total_received += bytes_received;
-        }
-
-        fclose(fp);
+        receive_write_file(client->socket, file_size, fp);
         if (is_file_exists)
         {
             send_response(client->socket, 200, "File uploaded successfully");

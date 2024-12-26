@@ -16,8 +16,6 @@ char *handle_response_chunk(int sock, int max_size);
     if (cond)                                    \
     {                                            \
         send_response(client->socket, 500, msg); \
-        json_object_put(parsed_json);            \
-        free(path_copy);                         \
         return;                                  \
     }
 

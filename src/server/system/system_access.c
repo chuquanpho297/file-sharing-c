@@ -391,3 +391,38 @@ void create_empty_file_if_not_exists(const char *filename)
         }
     }
 }
+
+void receive_write_file(int socket, long file_size, FILE *fp)
+{
+    char buffer[BUFFER_SIZE];
+    long total_received = 0;
+    int bytes_received;
+
+    while (total_received < file_size &&
+           (bytes_received = recv(socket, buffer, sizeof(buffer), 0)) > 0)
+    {
+        fwrite(buffer, 1, bytes_received, fp);
+        total_received += bytes_received;
+        printf("Progress: %ld/%ld bytes\r", total_received, file_size);
+        fflush(stdout);
+    }
+
+    fclose(fp);
+}
+
+void read_send_file(int socket, long file_size, FILE *fp)
+{
+    char buffer[BUFFER_SIZE];
+    int data;
+    long byte_send = 0;
+
+    while ((data = fread(buffer, 1, BUFFER_SIZE, fp)) > 0 &&
+           byte_send < file_size)
+    {
+        send(socket, buffer, data, 0);
+        byte_send += data;
+        printf("Progress: %ld/%ld bytes\r", byte_send, file_size);
+        fflush(stdout);
+    }
+    fclose(fp);
+}

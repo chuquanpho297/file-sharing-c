@@ -204,7 +204,8 @@ void handle_folder_upload(client_t *client, const char *buffer)
     char *new_folder_name = strdup(folder_name);
     while (!db_check_folder_exist(folder_name, client->username, parent_id))
     {
-        char *new_folder_name = snprintf("%s_(%d)", folder_name, version);
+        snprintf(new_folder_name, strlen(folder_name) + 4, "%s(%d)",
+                 folder_name, version);
         folder_name = new_folder_name;
         version++;
     }
@@ -340,19 +341,7 @@ void handle_folder_download(client_t *client, const char *buffer)
 
         json_object_put(response);
 
-        char buffer[BUFFER_SIZE];
-        long total_received = 0;
-        int bytes_received;
-
-        while (total_received < file_size &&
-               (bytes_received =
-                    recv(client->socket, buffer, sizeof(buffer), 0)) > 0)
-        {
-            fwrite(buffer, 1, bytes_received, fp);
-            total_received += bytes_received;
-        }
-
-        fclose(fp);
+        read_send_file(client->socket, file_size, fp);
         send_response(client->socket, 200, "Folder download successfully");
         remove(temp_zip_folder_path);
     }

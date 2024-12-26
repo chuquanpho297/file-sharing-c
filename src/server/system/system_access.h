@@ -32,5 +32,7 @@ const char *get_filename(const char *path);
 const char *get_folder_name(const char *path);
 bool file_exists(const char *filename);
 void create_empty_file_if_not_exists(const char *filename);
+void read_send_file(int socket, long file_size, FILE *fp);
+void receive_write_file(int socket, long file_size, FILE *fp);
 
 #endif  // SYSTEM_ACCESS_H

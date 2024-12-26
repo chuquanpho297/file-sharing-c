@@ -332,8 +332,7 @@ int main()
 
             printf("Enter folder path: ");
             scanf("%s", folder_path);
-            while (getchar() != '\n')
-                ;  // Consume newline
+            while (getchar() != '\n');  // Consume newline
             printf("Enter folder owner: ");
             scanf("%s", folder_owner);
             getchar();  // Consume newline
@@ -921,17 +920,7 @@ void handle_folder_download_client(int sock, const char *folder_path,
                 return;
             }
 
-            long byte_readed = 0;
-            int bytes_read;
-            while (byte_readed < file_size)
-            {
-                bytes_read = recv(sock, buffer, BUFFER_SIZE, 0);
-                fwrite(buffer, 1, bytes_read, f);
-                byte_readed += bytes_read;
-                printf("Progress: %ld/%ld bytes\r", byte_readed, file_size);
-                fflush(stdout);
-            }
-            fclose(f);
+            receive_write_file(sock, file_size, f);
             printf("\nDownload succeed!\n");
         }
     }
@@ -1125,16 +1114,7 @@ void handle_file_upload_client(int sock, const char *folder_path,
         if (response_code_int == 200)
         {
             printf("Uploading file: %s\n", file_path);
-            int data;
-            long byte_send = 0;
-            while ((data = fread(buffer, 1, BUFFER_SIZE, file)) > 0)
-            {
-                send(sock, buffer, data, 0);
-                byte_send += data;
-                printf("Progress: %ld/%ld bytes\r", byte_send, file_size);
-                fflush(stdout);
-            }
-            fclose(file);
+            read_send_file(sock, file_size, file);
             is_done = 1;
             printf("\nUploaded!\n");
         }
@@ -1213,17 +1193,7 @@ void handle_file_download_client(int sock, const char *file_path,
                 return;
             }
 
-            long byte_readed = 0;
-            int bytes_read;
-            while (byte_readed < file_size)
-            {
-                bytes_read = recv(sock, buffer, BUFFER_SIZE, 0);
-                fwrite(buffer, 1, bytes_read, f);
-                byte_readed += bytes_read;
-                printf("Progress: %ld/%ld bytes\r", byte_readed, file_size);
-                fflush(stdout);
-            }
-            fclose(f);
+            receive_write_file(sock, file_size, f);
             printf("\nDownload succeed!\n");
         }
     }
