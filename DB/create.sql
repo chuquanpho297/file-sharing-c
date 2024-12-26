@@ -16,7 +16,7 @@ CREATE TABLE `Folder` (
     `parentFolderID` VARCHAR(255),
     `createBy` VARCHAR(255) NOT NULL,
     `createAt` TIMESTAMP NOT NULL,
-    `access` ENUM('private', 'view', 'download') DEFAULT 'private',
+    `access` ENUM('private', 'view', 'download') DEFAULT 'view',
     `isRoot` BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (`folderID`),
     CONSTRAINT `createBy` FOREIGN KEY (`createBy`) REFERENCES `Users`(`userName`),
@@ -30,7 +30,7 @@ CREATE TABLE `File` (
     `fileSize` BIGINT NOT NULL,
     `createBy` VARCHAR(255) NOT NULL,
     `createAt` TIMESTAMP NOT NULL,
-    `access` ENUM('private', 'view', 'download') DEFAULT 'private',
+    `access` ENUM('private', 'view', 'download') DEFAULT 'view',
     PRIMARY KEY (`fileID`),
     CONSTRAINT `folderID` FOREIGN KEY (`folderID`) REFERENCES `Folder`(`folderID`)
 );
@@ -396,36 +396,43 @@ END //
 CREATE FUNCTION GetFileAccess(file_id VARCHAR(255))
 RETURNS ENUM('private', 'view', 'download') DETERMINISTIC
 BEGIN
-    DECLARE access ENUM('private', 'view', 'download');
-    SELECT access INTO access
+    DECLARE tmpAccess ENUM('private', 'view', 'download');
+    SELECT access INTO tmpAccess
     FROM File
     WHERE fileID = file_id;
-    RETURN access;
+    RETURN tmpAccess;
 END //
 
-CREATE FUNCTION SetFileAccess(file_id VARCHAR(255), access ENUM('private', 'view', 'download'))
+CREATE FUNCTION SetFileAccess(file_id VARCHAR(255), new_access ENUM('private', 'view', 'download'), user_name VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
-    UPDATE File SET access = access WHERE fileID = file_id;
-    RETURN TRUE;
+    IF EXISTS (SELECT 1 FROM File WHERE fileID = file_id AND createBy = user_name) THEN
+        UPDATE File SET access = new_access WHERE fileID = file_id AND createBy = user_name;
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
 END //
 
-CREATE FUNCTION SetFolderAccess(folder_id VARCHAR(255), access ENUM('private', 'view', 'download'))
+CREATE FUNCTION SetFolderAccess(folder_id VARCHAR(255), new_access ENUM('private', 'view', 'download'), user_name VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
-    UPDATE Folder SET access = access WHERE folderID = folder_id;
-    UPDATE File SET access = access WHERE folderID = folder_id;
-    RETURN TRUE;
+    IF EXISTS (SELECT 1 FROM Folder WHERE folderID = folder_id AND createBy = user_name) THEN
+        UPDATE Folder SET access = new_access WHERE folderID = folder_id AND createBy = user_name;
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
 END //
 
 CREATE FUNCTION GetFolderAccess(folder_id VARCHAR(255))
 RETURNS ENUM('private', 'view', 'download') DETERMINISTIC
 BEGIN
-    DECLARE access ENUM('private', 'view', 'download');
-    SELECT access INTO access
+    DECLARE tmp ENUM('private', 'view', 'download');
+    SELECT access INTO tmp
     FROM Folder
     WHERE folderID = folder_id;
-    RETURN access;
+    RETURN tmp;
 END //
 
 CREATE PROCEDURE SearchFile(IN file_name VARCHAR(255))

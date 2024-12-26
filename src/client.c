@@ -66,12 +66,16 @@ void handle_file_delete_client(int sock, const char *file_path,
                                struct json_object *j);
 void handle_file_search_client(int sock, const char *file_name,
                                struct json_object *jobj);
+void handle_set_folder_access(int sock, const char *folder_path,
+                              const char *access, struct json_object *jobj);
 void handle_logout(int sock, int *is_logged_in, char *current_user);
 void handle_file_search_client(int sock, const char *search_term,
                                struct json_object *j);
 void send_file(int sock, const char *file_path);
 void send_folder(int sock, const char *upload_folder_path,
                  const char *des_folder_path);
+void handle_set_file_access(int sock, const char *file_path, const char *access,
+                            struct json_object *jobj);
 const char *get_filename(const char *path);
 
 int main()
@@ -338,8 +342,7 @@ int main()
 
             printf("Enter folder path: ");
             scanf("%s", folder_path);
-            while (getchar() != '\n')
-                ;  // Consume newline
+            while (getchar() != '\n');  // Consume newline
             printf("Enter folder owner: ");
             scanf("%s", folder_owner);
             getchar();  // Consume newline
@@ -501,6 +504,61 @@ int main()
             getchar();  // Consume newline
 
             handle_file_move_client(sock, file_path, to_folder, jobj);
+        }
+        else if (strcmp(command, "SET_FOLDER_ACCESS") == 0)
+        {
+            if (!is_logged_in)
+            {
+                printf(
+                    "You do not have permission to set folder access. Please "
+                    "log in!\n");
+                continue;
+            }
+
+            char folder_path[MAX_PATH_LENGTH];
+            char access[MAX_COMMAND_LENGTH];
+            printf("Enter folder id: ");
+            scanf("%s", folder_path);
+            getchar();  // Consume newline
+            printf("Enter access level: ");
+            scanf("%s", access);
+            getchar();  // Consume newline
+            if (strcmp(access, "view") != 0 && strcmp(access, "download") != 0)
+            {
+                printf(
+                    "Invalid access level! Please enter 'view' or "
+                    "'download'.\n");
+                continue;
+            }
+
+            handle_set_folder_access(sock, folder_path, access, jobj);
+        }
+        else if (strcmp(command, "SET_FILE_ACCESS") == 0)
+        {
+            if (!is_logged_in)
+            {
+                printf(
+                    "You do not have permission to set file access. Please log "
+                    "in!\n");
+                continue;
+            }
+
+            char file_path[MAX_PATH_LENGTH];
+            char access[MAX_COMMAND_LENGTH];
+            printf("Enter file id: ");
+            scanf("%s", file_path);
+            getchar();  // Consume newline
+            printf("Enter access level: ");
+            scanf("%s", access);
+            getchar();  // Consume newline
+            if (strcmp(access, "view") != 0 && strcmp(access, "download") != 0)
+            {
+                printf(
+                    "Invalid access level! Please enter 'view' or "
+                    "'download'.\n");
+                continue;
+            }
+            handle_set_file_access(sock, file_path, access, jobj);
         }
         else if (strcmp(command, "FILE_DELETE") == 0)
         {
@@ -1009,28 +1067,30 @@ void handle_folder_search_client(int sock, const char *folder_name,
     struct json_object *payload;
     json_object_object_get_ex(parsed_json, "responseCode", &response_code);
     json_object_object_get_ex(parsed_json, "payload", &payload);
-    printf("responseCode: %d\n", json_object_get_int(response_code));
     struct json_object *folder_content_array =
         json_object_object_get(payload, "folders");
 
-    printf("%16s %6s %6s %s \n", "Folder Name", "Access", "Created At",
-           "Folder Path");
+    printf("%-36s %-16s %-16s %-16s %s \n", "Folder Id", "Folder Name",
+           "Access", "Created By", "Folder Path");
     int array_size = json_object_array_length(folder_content_array);
     for (int i = 0; i < array_size; i++)
     {
         struct json_object *folder =
             json_object_array_get_idx(folder_content_array, i);
+        struct json_object *folder_id =
+            json_object_object_get(folder, "folderId");
         struct json_object *folder_name =
             json_object_object_get(folder, "folderName");
         struct json_object *access = json_object_object_get(folder, "access");
         struct json_object *created_at =
-            json_object_object_get(folder, "createdAt");
+            json_object_object_get(folder, "createdBy");
         struct json_object *folder_path =
             json_object_object_get(folder, "folderPath");
-        printf("%16s %6s %6s %9s \n", json_object_get_string(folder_name),
-               json_object_get_string(access),
-               json_object_get_string(created_at),
-               json_object_get_string(folder_path));
+        printf(
+            "%-36s %-16s %-16s %-16s %s \n", json_object_get_string(folder_id),
+            json_object_get_string(folder_name), json_object_get_string(access),
+            json_object_get_string(created_at),
+            json_object_get_string(folder_path));
     }
 
     json_object_put(parsed_json);
@@ -1087,7 +1147,7 @@ void send_folder(int sock, const char *upload_folder_path,
                                    json_object_new_string(des_path));
             json_object_object_add(jpayload, "fileSize",
                                    json_object_new_int64(file_size));
-            char *jpayload_str = json_object_to_json_string(jpayload);
+            const char *jpayload_str = json_object_to_json_string(jpayload);
 
             send(sock, jpayload_str, strlen(jpayload_str), 0);
 
@@ -1290,6 +1350,8 @@ void handle_file_download_client(int sock, const char *file_path,
                 return;
             }
 
+            send(sock, "OK", 2, 0);
+
             long byte_readed = 0;
             int bytes_read;
             while (byte_readed < file_size)
@@ -1456,13 +1518,62 @@ char *clean_file_path(const char *path)
     return result;
 }
 
+void handle_set_folder_access(int sock, const char *folder_path,
+                              const char *access, struct json_object *jobj)
+{
+    struct json_object *jpayload = json_object_new_object();
+
+    json_object_object_add(jpayload, "folderId",
+                           json_object_new_string(folder_path));
+    json_object_object_add(jpayload, "access", json_object_new_string(access));
+    json_object_object_add(jobj, "messageType",
+                           json_object_new_string("SET_FOLDER_ACCESS"));
+    json_object_object_add(jobj, "payload", jpayload);
+
+    const char *request = json_object_to_json_string(jobj);
+    send(sock, request, strlen(request), 0);
+
+    json_object_put(jobj);  // Free the JSON object
+
+    char buffer[BUFFER_SIZE];
+
+    // Check response
+    recv(sock, buffer, BUFFER_SIZE, 0);
+
+    handle_print_payload_response(buffer, print_message_oneline);
+}
+
+void handle_set_file_access(int sock, const char *file_path, const char *access,
+                            struct json_object *jobj)
+{
+    struct json_object *jpayload = json_object_new_object();
+
+    json_object_object_add(jpayload, "fileId",
+                           json_object_new_string(file_path));
+    json_object_object_add(jpayload, "access", json_object_new_string(access));
+    json_object_object_add(jobj, "messageType",
+                           json_object_new_string("SET_FILE_ACCESS"));
+    json_object_object_add(jobj, "payload", jpayload);
+
+    const char *request = json_object_to_json_string(jobj);
+    send(sock, request, strlen(request), 0);
+
+    json_object_put(jobj);  // Free the JSON object
+
+    char buffer[BUFFER_SIZE];
+
+    // Check response
+    recv(sock, buffer, BUFFER_SIZE, 0);
+
+    handle_print_payload_response(buffer, print_message_oneline);
+}
+
 void print_usage(void)
 {
     printf("Commands:\n");
     printf("LOGIN - Log in to the system\n");
     printf("REGISTER - Register a new user\n");
     printf("LOGOUT - Log out of the system\n");
-    printf("FOLDER_CONTENT - List all files in a folder\n");
     printf("FOLDER_CREATE - Create a new folder\n");
     printf("FOLDER_RENAME - Rename a folder\n");
     printf("FOLDER_COPY - Copy a folder to another folder\n");
@@ -1471,6 +1582,8 @@ void print_usage(void)
     printf("FOLDER_SEARCH - Search for a folder\n");
     printf("FOLDER_DOWNLOAD - Download a folder\n");
     printf("FOLDER_UPLOAD - Upload a folder\n");
+    printf("SET_FOLDER_ACCESS - Set access permissions for a folder\n");
+    printf("SET_FILE_ACCESS - Set access permissions for a file\n");
     printf("FILE_UPLOAD - Upload a file to a folder\n");
     printf("FILE_DOWNLOAD - Download a file from a folder\n");
     printf("FILE_RENAME - Rename a file\n");

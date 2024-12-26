@@ -159,6 +159,14 @@ void *handle_client(void *arg)
             {
                 handle_folder_delete(client, buffer);
             }
+            else if (strcmp(type, "SET_FOLDER_ACCESS") == 0)
+            {
+                handle_folder_set_access(client, buffer);
+            }
+            else if (strcmp(type, "SET_FILE_ACCESS") == 0)
+            {
+                handle_file_set_access(client, buffer);
+            }
             else if (strcmp(type, "FOLDER_SEARCH") == 0)
             {
                 handle_folder_search(client, buffer);
