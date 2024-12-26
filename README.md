@@ -4,9 +4,8 @@
 
 Before you begin, ensure you have the following installed on your system:
 
-- CMake (version 3.10 or higher)
-- GCC or another C compiler
-- pkg-config
+### On Ubuntu
+- CMake (version 3.22 or higher)
 - Libraries: `json-c`, `libzip`, `mysqlclient`, and `clang-format`
 
   ```bash
@@ -48,12 +47,6 @@ Before you begin, ensure you have the following installed on your system:
 
   ```bash
   ./client
-  ```
-
-- **Test**: Run the test executable:
-
-  ```bash
-  ./test
   ```
 
 ## Formatting the Code
