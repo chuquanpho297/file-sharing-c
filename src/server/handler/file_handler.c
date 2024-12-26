@@ -24,26 +24,112 @@ void handle_file_create(client_t *client, const char *buffer)
     const char *file_name = json_object_get_string(file_name_obj);
     long file_size = json_object_get_int64(file_size_obj);
     const char *folder_path = json_object_get_string(folder_path_obj);
-    char *token = strtok((char *)folder_path, "/");
     char *parent_id = db_get_root_folder_id(client->username);
     char *folder_name = NULL;
 
-    while (token != NULL)
+    if (folder_path && strlen(folder_path) > 0)
     {
-        folder_name = token;
-        parent_id = db_get_folder_id(folder_name, client->username, parent_id);
-        if (parent_id == NULL)
+        char *token = strtok((char *)folder_path, "/");
+        while (token != NULL)
         {
-            send_response(client->socket, 404, "Folder not found");
+            folder_name = token;
+            parent_id = db_get_folder_id(folder_name, client->username, parent_id);
+            if (parent_id == NULL)
+            {
+                send_response(client->socket, 404, "Folder not found");
+                json_object_put(parsed_json);
+                return;
+            }
+            token = strtok(NULL, "/");
+        }
+    }
+
+    char path[4096];
+    char file_path[4096];
+    snprintf(path, sizeof(path), "root/%s/%s", client->username, folder_path);
+    mkdir(path, 0777);
+
+    // Calculate required space
+    size_t required_len = strlen(path) + strlen(file_name) + 2; // +2 for '/' and null terminator
+    if (required_len > 4096)
+    {
+        send_response(client->socket, 400, "Path too long");
+        json_object_put(parsed_json);
+        return;
+    }
+
+    // Safe concatenation
+    snprintf(file_path, sizeof(file_path) + 1, "%s/%s", path, file_name);
+    int is_file_exists = db_check_file_exist(file_name, client->username, parent_id);
+
+    if (is_file_exists)
+    {
+        send_response(client->socket, 409, "File already exists");
+        json_object_put(parsed_json);
+        char tmpBuffer[BUFFER_SIZE];
+        recv(client->socket, tmpBuffer, BUFFER_SIZE, 0);
+        struct json_object *tmp_json = json_tokener_parse(tmpBuffer);
+        struct json_object *answer;
+        json_object_object_get_ex(tmp_json, "answer", &answer);
+        const char *answer_str = json_object_get_string(answer);
+        if (strcmp(answer_str, "Y") != 0 && strcmp(answer_str, "y") != 0 &&
+            strcmp(answer_str, "N") != 0 && strcmp(answer_str, "n") != 0)
+        {
+            send_response(client->socket, 400, "Invalid answer. Please respond with Y/N");
+            json_object_put(tmp_json);
             json_object_put(parsed_json);
             return;
         }
-        token = strtok(NULL, "/");
+        if (strcmp(answer_str, "N") == 0 || strcmp(answer_str, "n") == 0)
+        {
+            json_object_put(tmp_json);
+            json_object_put(parsed_json);
+            return;
+        }
+
+        if (file_exists(file_path))
+            remove(file_path);
+
+        json_object_put(tmp_json);
     }
 
-    if (db_create_file(file_name, file_size, parent_id, client->username))
+    // Check if file exists, if not create an empty file
+    create_empty_file_if_not_exists(file_path);
+
+    // Send success response to client
+    send_response(client->socket, 200, "Ready to receive file");
+
+    // Receive and write file
+    FILE *fp = fopen(file_path, "wb");
+    if (fp != NULL)
     {
-        send_response(client->socket, 201, "File created successfully");
+        char buffer[BUFFER_SIZE];
+        long total_received = 0;
+        int bytes_received;
+
+        while (total_received < file_size &&
+               (bytes_received = recv(client->socket, buffer, sizeof(buffer), 0)) > 0)
+        {
+            fwrite(buffer, 1, bytes_received, fp);
+            total_received += bytes_received;
+        }
+
+        fclose(fp);
+        if (is_file_exists)
+        {
+            send_response(client->socket, 200, "File uploaded successfully");
+        }
+        else
+        {
+            if (db_create_file(file_name, file_size, parent_id, client->username))
+            {
+                send_response(client->socket, 201, "File created successfully");
+            }
+            else
+            {
+                send_response(client->socket, 500, "Failed to create file");
+            }
+        }
     }
     else
     {
@@ -474,4 +560,27 @@ void handle_file_download(client_t *client, const char *buffer)
     // }
 
     json_object_put(parsed_json);
+}
+
+// Check if file exists
+bool file_exists(const char *filename)
+{
+    return access(filename, F_OK) != -1;
+}
+
+// Create an empty file if it does not exist
+void create_empty_file_if_not_exists(const char *filename)
+{
+    if (!file_exists(filename))
+    {
+        FILE *fp = fopen(filename, "wb");
+        if (fp != NULL)
+        {
+            fclose(fp);
+        }
+        else
+        {
+            perror("Failed to create file");
+        }
+    }
 }

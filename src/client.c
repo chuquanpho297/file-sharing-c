@@ -11,7 +11,7 @@
 #include "./utils/client_utils.h"
 
 #define PORT 5555
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 8192
 #define MAX_COMMAND_LENGTH 1024
 #define MAX_USERNAME 32
 #define MAX_PASSWORD 32
@@ -369,10 +369,22 @@ int main()
             scanf("%s", file_path);
             getchar();  // Consume newline
 
-            char folder_path[MAX_PATH_LENGTH];
+            char *folder_path = NULL;
+            char folder_name[MAX_FOLDER_NAME];
+            char temp_buffer[MAX_PATH_LENGTH];
+
             printf("Upload at folder: ");
-            scanf("%s", folder_path);
-            getchar();  // Consume newline
+            if (fgets(temp_buffer, MAX_PATH_LENGTH, stdin) != NULL)
+            {
+                // Remove trailing newline if present
+                temp_buffer[strcspn(temp_buffer, "\n")] = 0;
+
+                // If input is not empty, allocate and copy
+                if (strlen(temp_buffer) > 0)
+                {
+                    folder_path = strdup(temp_buffer);
+                }
+            } // Consume newline
 
             handle_file_upload(sock, folder_path, file_path, jobj);
         }
@@ -959,8 +971,12 @@ void handle_file_upload(int sock, const char *folder_path,
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    json_object_object_add(jpayload, "folderPath",
-                           json_object_new_string(folder_path));
+    if (folder_path != NULL)
+        json_object_object_add(jpayload, "folderPath",
+                               json_object_new_string(folder_path));
+    else
+        json_object_object_add(jpayload, "folderPath",
+                               json_object_new_string(""));
     json_object_object_add(jpayload, "fileName",
                            json_object_new_string(get_filename(file_path)));
     json_object_object_add(jpayload, "fileSize",
@@ -975,34 +991,68 @@ void handle_file_upload(int sock, const char *folder_path,
     json_object_put(jobj);  // Free the JSON object
 
     char buffer[BUFFER_SIZE];
-    recv(sock, buffer, BUFFER_SIZE, 0);
-
-    struct json_object *parsed_json;
-    struct json_object *response_code;
-    struct json_object *payload;
-    parsed_json = json_tokener_parse(buffer);
-    json_object_object_get_ex(parsed_json, "responseCode", &response_code);
-    json_object_object_get_ex(parsed_json, "payload", &payload);
-    int response_code_int = json_object_get_int(response_code);
-    print_message_oneline(response_code_int, payload);
-
-    if (response_code_int == 200)
+    int is_done = 0;
+    do
     {
-        printf("Upload start. Please wait!\n");
-        int data;
-        long byte_send = 0;
-        while ((data = fread(buffer, 1, BUFFER_SIZE, file)) > 0)
-        {
-            send(sock, buffer, data, 0);
-            byte_send += data;
-            printf("Progress: %ld/%ld bytes\r", byte_send, file_size);
-            fflush(stdout);
-        }
-        fclose(file);
-        printf("\nUploaded!\n");
-    }
+        recv(sock, buffer, BUFFER_SIZE, 0);
 
-    json_object_put(parsed_json);  // Free the JSON object
+        struct json_object *parsed_json;
+        struct json_object *response_code;
+        struct json_object *payload;
+        parsed_json = json_tokener_parse(buffer);
+        json_object_object_get_ex(parsed_json, "responseCode", &response_code);
+        json_object_object_get_ex(parsed_json, "payload", &payload);
+        int response_code_int = json_object_get_int(response_code);
+        print_message_oneline(response_code_int, payload);
+
+        if (response_code_int == 409)
+        {
+            printf("File already exists. Do you want to overwrite it? (Y/N)\n");
+            char answer[1];
+            scanf("%s", answer);
+            struct json_object *tmp = json_object_new_object();
+            json_object_object_add(tmp, "answer", json_object_new_string(answer));
+            const char *request = json_object_to_json_string(tmp);
+            send(sock, request, strlen(request), 0);
+            json_object_put(tmp);
+            if (strcmp(answer, "N") == 0 || strcmp(answer, "n") == 0)
+            {
+                json_object_put(parsed_json);
+                return;
+            }
+        }
+        if (response_code_int == 500)
+        {
+            printf("Failed to create file!\n");
+            json_object_put(parsed_json);
+            return;
+        }
+
+        if (response_code_int == 404)
+        {
+            printf("Folder not found!\n");
+            json_object_put(parsed_json);
+            return;
+        }
+
+        if (response_code_int == 200)
+        {
+            printf("Upload start. Please wait!\n");
+            int data;
+            long byte_send = 0;
+            while ((data = fread(buffer, 1, BUFFER_SIZE, file)) > 0)
+            {
+                send(sock, buffer, data, 0);
+                byte_send += data;
+                printf("Progress: %ld/%ld bytes\r", byte_send, file_size);
+                fflush(stdout);
+            }
+            fclose(file);
+            is_done = 1;
+            printf("\nUploaded!\n");
+        }
+        json_object_put(parsed_json); // Free the JSON object
+    } while (!is_done);
 }
 
 void handle_file_download(int sock, const char *file_path,

@@ -124,13 +124,35 @@ void handle_folder_create(client_t *client, const char *buffer)
         free(path_copy);
     }
 
-    if (db_create_folder(folder_name, parent_id, client->username))
+    char path[4096];
+    if (folder_path && strlen(folder_path) > 0)
+        snprintf(path, sizeof(path), "root/%s/%s/%s", client->username, folder_path, folder_name);
+    else
+        snprintf(path, sizeof(path), "root/%s/%s", client->username, folder_name);
+
+    struct stat st = {0};
+    if (stat(path, &st) == 0)
     {
-        send_response(client->socket, 201, "Folder created successfully");
+        send_response(client->socket, 409, "Folder already exists");
     }
     else
     {
-        send_response(client->socket, 500, "Failed to create folder");
+        if (mkdir(path, 0777) == 0)
+        {
+            if (db_create_folder(folder_name, parent_id, client->username))
+            {
+                send_response(client->socket, 201, "Folder created successfully");
+            }
+            else
+            {
+                rmdir(path);
+                send_response(client->socket, 500, "Failed to create folder");
+            }
+        }
+        else
+        {
+            send_response(client->socket, 501, "Failed to create folder");
+        }
     }
 
     free(parent_id);

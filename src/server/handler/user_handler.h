@@ -1,4 +1,6 @@
 #include "../../utils/structs.h"
+#include <sys/stat.h>
+#include <stdio.h>
 #ifndef USER_HANDLER_H
 #define USER_HANDLER_H
 

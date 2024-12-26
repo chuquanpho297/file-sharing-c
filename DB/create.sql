@@ -463,17 +463,27 @@ BEGIN
     SELECT COUNT(*) INTO folder_exists
     FROM Folder
     WHERE folderName = folder_name AND createBy = user_name AND parentFolderID = parent_folder_id;
-    RETURN folder_exists > 0;
+    IF folder_exists > 0 THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
 END //
 
-CREATE FUNCTION CheckFileExist(file_name VARCHAR(255), user_name VARCHAR(255), parent_folder_id VARCHAR(255))
+CREATE FUNCTION CheckFileExists(file_name VARCHAR(255), user_name VARCHAR(255), parent_folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
     DECLARE file_exists INT;
     SELECT COUNT(*) INTO file_exists
-    FROM File
-    WHERE fName = file_name AND createBy = user_name AND folderID = parent_folder_id;
-    RETURN file_exists > 0;
+    FROM File f
+    WHERE f.fName = file_name 
+    AND f.createBy = user_name 
+    AND f.folderID = parent_folder_id;
+    IF file_exists > 0 THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
 END //
 
 CREATE PROCEDURE GetAllFileInFolder(folder_id VARCHAR(255))
