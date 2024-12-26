@@ -403,7 +403,7 @@ int main()
             {
                 // Remove trailing newline if present
                 temp_buffer[strcspn(temp_buffer, "\n")] = 0;
-               
+
                 // If input is not empty, allocate and copy
                 if (strlen(temp_buffer) > 0)
                 {

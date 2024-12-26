@@ -23,5 +23,4 @@ char *handle_response_chunk(int sock, int max_size);
 
 void print_file_table(struct json_object *files);
 
-
 #endif  // HELPER_H
