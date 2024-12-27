@@ -11,6 +11,7 @@
 #include "./server/system/system_access.h"
 #include "./utils/helper.h"
 #include "./utils/structs.h"
+#include "utils/config.h"
 
 #define PORT 5555
 #define BUFFER_SIZE 8192
@@ -69,7 +70,6 @@ void handle_file_search_client(int sock, const char *file_name,
 void handle_logout(int sock, int *is_logged_in, char *current_user);
 void handle_file_search_client(int sock, const char *search_term,
                                struct json_object *j);
-void send_file(int sock, const char *file_path);
 void send_folder(int sock, const char *upload_folder_path,
                  const char *des_folder_path);
 const char *get_filename(const char *path);
@@ -337,12 +337,9 @@ int main()
             char des_folder_path[MAX_PATH_LENGTH];
 
             printf("Enter folder path: ");
-            scanf("%s", folder_path);
-            while (getchar() != '\n')
-                ;  // Consume newline
+            fgets_not_newline(folder_path, sizeof(folder_path));
             printf("Enter folder owner: ");
-            scanf("%s", folder_owner);
-            getchar();  // Consume newline
+            fgets_not_newline(folder_owner, sizeof(folder_owner));
             printf("Enter destination folder path: ");
             scanf("%s", des_folder_path);
             getchar();  // Consume newline
@@ -351,6 +348,7 @@ int main()
                 printf("Folder not found: %s\n", des_folder_path);
                 continue;
             }
+            printf("Folder path: %s\n", folder_path);
 
             handle_folder_download_client(sock, folder_path, folder_owner,
                                           des_folder_path, jobj);
@@ -368,8 +366,7 @@ int main()
             char des_folder_path[MAX_PATH_LENGTH];
             char folder_path[MAX_FOLDER_NAME];
             printf("Enter destination folder path: ");
-            scanf("%s", des_folder_path);
-            getchar();  // Consume newline
+            fgets_not_newline(des_folder_path, sizeof(des_folder_path));
             printf("Enter folder path: ");
             scanf("%s", folder_path);
             getchar();  // Consume newline
@@ -788,31 +785,28 @@ void handle_folder_download_client(int sock, const char *folder_path,
         struct json_object *zip_folder_name_obj;
 
         json_object_object_get_ex(payload, "fileSize", &file_size_obj);
-        json_object_object_get_ex(payload, "zipFolderName",
+        json_object_object_get_ex(payload, "zipFoldername",
                                   &zip_folder_name_obj);
 
         long file_size = json_object_get_int64(file_size_obj);
         const char *zip_folder_name =
             json_object_get_string(zip_folder_name_obj);
 
-        json_object_put(parsed_json);  // Free the JSON object
+        char zip_folder_path[MAX_PATH_LENGTH];
+        snprintf(zip_folder_path, sizeof(zip_folder_path), "%s/%s",
+                 des_folder_path, zip_folder_name);
 
-        if (file_size != 0)
+        FILE *f = fopen(zip_folder_path, "wb");
+        if (!f)
         {
-            char zip_folder_path[MAX_PATH_LENGTH];
-            snprintf(zip_folder_path, sizeof(zip_folder_path), "%s/%s",
-                     des_folder_path, zip_folder_name);
-
-            FILE *f = fopen(zip_folder_path, "wb");
-            if (!f)
-            {
-                printf("Failed to open destination file!\n");
-                return;
-            }
-
-            receive_write_file(sock, file_size, f);
-            printf("\nDownload succeed!\n");
+            printf("Failed to open destination file!\n");
+            return;
         }
+
+        send(sock, "OK", strlen("OK"), 0);
+
+        receive_write_file(sock, file_size, f);
+        printf("\nDownload succeed!\n");
     }
 
     json_object_put(parsed_json);  // Free the JSON object
@@ -829,8 +823,7 @@ void handle_folder_upload_client(int sock, const char *des_folder_path,
     }
 
     int file_count = count_files_in_folder(upload_folder_path);
-    printf("File count: %d\n", file_count);
-    return;
+
     const char *folder_name = get_folder_name(upload_folder_path);
     struct json_object *jpayload = json_object_new_object();
 
@@ -860,27 +853,118 @@ void handle_folder_upload_client(int sock, const char *des_folder_path,
     parsed_json = json_tokener_parse(buffer);
     json_object_object_get_ex(parsed_json, "responseCode", &response_code);
     json_object_object_get_ex(parsed_json, "payload", &payload);
-    json_object_object_get_ex(payload, "validFolderName",
-                              &valid_folder_name_obj);
     int response_code_int = json_object_get_int(response_code);
 
     print_message_oneline(response_code_int, payload);
 
-    const char *valid_folder_name =
-        json_object_get_string(valid_folder_name_obj);
-    char valid_des_folder_path[MAX_PATH_LENGTH];
-
-    snprintf(valid_des_folder_path, sizeof(valid_des_folder_path), "%s/%s",
-             des_folder_path, valid_folder_name);
-
     if (response_code_int == 200)
     {
         printf("Upload start. Please wait!\n");
+
+        json_object_object_get_ex(payload, "validFolderName",
+                                  &valid_folder_name_obj);
+        const char *valid_folder_name =
+            json_object_get_string(valid_folder_name_obj);
+        char valid_des_folder_path[MAX_PATH_LENGTH];
+
+        if (strlen(des_folder_path) == 0)
+        {
+            snprintf(valid_des_folder_path, sizeof(valid_des_folder_path), "%s",
+                     valid_folder_name);
+        }
+        else
+        {
+            snprintf(valid_des_folder_path, sizeof(valid_des_folder_path),
+                     "%s/%s", des_folder_path, valid_folder_name);
+        }
+
         send_folder(sock, upload_folder_path, valid_des_folder_path);
-        printf("Upload completed!\n");
+
+        char buffer[BUFFER_SIZE];
+        recv(sock, buffer, BUFFER_SIZE, 0);
+        handle_print_payload_response(buffer, print_message_oneline);
     }
 
     json_object_put(parsed_json);  // Free the JSON object
+}
+
+void send_folder(int sock, const char *upload_folder_path,
+                 const char *des_folder_path)
+{
+    DIR *dir = opendir(upload_folder_path);
+
+    struct dirent *entry;
+    char upload_path[MAX_PATH_LENGTH];
+    char des_path[MAX_PATH_LENGTH];
+
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_type == DT_DIR)
+        {
+            if (strcmp(entry->d_name, ".") == 0 ||
+                strcmp(entry->d_name, "..") == 0)
+            {
+                continue;
+            }
+            snprintf(upload_path, sizeof(upload_path), "%s/%s",
+                     upload_folder_path, entry->d_name);
+            snprintf(des_path, sizeof(des_path), "%s/%s", des_folder_path,
+                     entry->d_name);
+            send_folder(sock, upload_path, des_path);
+        }
+        else
+        {
+            snprintf(upload_path, sizeof(upload_path), "%s/%s",
+                     upload_folder_path, entry->d_name);
+            snprintf(des_path, sizeof(des_path), "%s/%s", des_folder_path,
+                     entry->d_name);
+
+            FILE *file = fopen(upload_path, "rb");
+            if (!file)
+            {
+                printf("Failed to open file: %s\n", upload_path);
+                send(sock, CLIENT_ERROR, strlen(CLIENT_ERROR), 0);
+                continue;
+            }
+
+            fseek(file, 0, SEEK_END);
+            long file_size = ftell(file);
+            fseek(file, 0, SEEK_SET);
+
+            struct json_object *jpayload = json_object_new_object();
+            json_object_object_add(jpayload, "filePath",
+                                   json_object_new_string(des_path));
+            json_object_object_add(jpayload, "fileSize",
+                                   json_object_new_int64(file_size));
+            const char *jpayload_str = json_object_to_json_string(jpayload);
+
+            send(sock, jpayload_str, strlen(jpayload_str), 0);
+
+            char buffer[BUFFER_SIZE];
+            recv(sock, buffer, BUFFER_SIZE, 0);
+
+            struct json_object *parsed_json = json_tokener_parse(buffer);
+            struct json_object *response_code_obj;
+            struct json_object *payload_obj;
+            json_object_object_get_ex(parsed_json, "responseCode",
+                                      &response_code_obj);
+            json_object_object_get_ex(parsed_json, "payload", &payload_obj);
+
+            int response_code = json_object_get_int(response_code_obj);
+            if (response_code == 200)
+            {
+                printf("Uploading file: %s\n", upload_path);
+                read_send_file(sock, file_size, file);
+            }
+            else
+                print_message_oneline(response_code, payload_obj);
+
+            json_object_put(parsed_json);
+            json_object_put(jpayload);
+        }
+    }
+
+    closedir(dir);
 }
 
 void handle_folder_rename_client(int sock, const char *folder_path,
@@ -1034,90 +1118,6 @@ void handle_folder_search_client(int sock, const char *folder_name,
     }
 
     json_object_put(parsed_json);
-}
-
-void send_folder(int sock, const char *upload_folder_path,
-                 const char *des_folder_path)
-{
-    DIR *dir = opendir(upload_folder_path);
-    if (!dir)
-    {
-        printf("Failed to open directory: %s\n", upload_folder_path);
-        return;
-    }
-
-    struct dirent *entry;
-    char upload_path[MAX_PATH_LENGTH];
-    char des_path[MAX_PATH_LENGTH];
-
-    while ((entry = readdir(dir)) != NULL)
-    {
-        if (entry->d_type == DT_DIR)
-        {
-            if (strcmp(entry->d_name, ".") == 0 ||
-                strcmp(entry->d_name, "..") == 0)
-            {
-                continue;
-            }
-            snprintf(upload_path, sizeof(upload_path), "%s/%s",
-                     upload_folder_path, entry->d_name);
-            snprintf(des_path, sizeof(des_path), "%s/%s", des_folder_path,
-                     entry->d_name);
-            send_folder(sock, upload_path, des_path);
-        }
-        else
-        {
-            snprintf(upload_path, sizeof(upload_path), "%s/%s",
-                     upload_folder_path, entry->d_name);
-            snprintf(des_path, sizeof(des_path), "%s/%s", des_folder_path,
-                     entry->d_name);
-            FILE *file = fopen(upload_path, "rb");
-            if (!file)
-            {
-                printf("Failed to open file: %s\n", upload_path);
-                continue;
-            }
-
-            fseek(file, 0, SEEK_END);
-            long file_size = ftell(file);
-            fseek(file, 0, SEEK_SET);
-
-            struct json_object *jpayload = json_object_new_object();
-            json_object_object_add(jpayload, "filePath",
-                                   json_object_new_string(des_path));
-            json_object_object_add(jpayload, "fileSize",
-                                   json_object_new_int64(file_size));
-            char *jpayload_str = json_object_to_json_string(jpayload);
-
-            send(sock, jpayload_str, strlen(jpayload_str), 0);
-
-            read_send_file(sock, file_size, file);
-
-            json_object_put(jpayload);
-        }
-    }
-
-    closedir(dir);
-}
-
-void send_file(int sock, const char *file_path)
-{
-    FILE *file = fopen(file_path, "rb");
-    if (!file)
-    {
-        printf("Source file path does not exist!!!\n");
-        return;
-    }
-
-    char buffer[BUFFER_SIZE];
-    int bytes_read;
-
-    while ((bytes_read = fread(buffer, 1, BUFFER_SIZE, file)) > 0)
-    {
-        send(sock, buffer, bytes_read, 0);
-    }
-
-    fclose(file);
 }
 
 void handle_file_upload_client(int sock, const char *folder_path,

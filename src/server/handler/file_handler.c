@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "../../utils/config.h"
 #include "../../utils/helper.h"
 #include "../../utils/structs.h"
 #include "../db/db_access.h"
@@ -48,7 +49,8 @@ void handle_file_create(client_t *client, const char *buffer)
 
     char path[MAX_PATH_LENGTH];
     char file_path[MAX_PATH_LENGTH];
-    snprintf(path, sizeof(path), "root/%s/%s", client->username, folder_path);
+    snprintf(path, sizeof(path), "%s/%s/%s", ROOT_FOLDER, client->username,
+             folder_path);
     mkdir(path, 0777);
 
     // Calculate required space

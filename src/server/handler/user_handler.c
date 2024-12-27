@@ -3,6 +3,7 @@
 #include <json-c/json.h>
 #include <mysql/mysql.h>
 
+#include "../../utils/config.h"
 #include "../../utils/helper.h"
 #include "../db/db_access.h"
 #include "string.h"
@@ -48,22 +49,23 @@ void handle_register(client_t *client, const char *buffer)
 
     if (db_create_user(username, password))
     {
+        char path[1024];
         strncpy(client->username, username, MAX_USERNAME - 1);
         client->is_logged_in = 1;
-        send_response(client->socket, 201, "Registration successful");
-        char path[1024];
-        snprintf(path, sizeof(path), "root/%s", client->username);
+        snprintf(path, sizeof(path), "%s/%s", ROOT_FOLDER, client->username);
 
         struct stat st = {0};
         if (stat(path, &st) == 0)
         {
-            send_response(client->socket, 409, "Folder already exists");
+            json_object_put(parsed_json);
+            send_response(client->socket, 409, "User already exists");
         }
         else
         {
             if (mkdir(path, 0777) == 0)
             {
                 db_create_root_folder(client->username);
+                send_response(client->socket, 201, "Registration successful");
             }
             else
             {

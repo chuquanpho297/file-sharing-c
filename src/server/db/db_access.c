@@ -133,6 +133,8 @@ bool db_create_file(const char *file_name, long file_size,
              "SELECT CreateFile('%s', %ld, '%s', '%s') AS file_id", file_name,
              file_size, folder_id, user_name);
 
+    printf("Query: %s\n", query);
+
     if (mysql_query(conn, query))
     {
         printf("Create file failed: %s\n", mysql_error(conn));
@@ -175,6 +177,8 @@ bool db_create_folder(const char *folder_name, const char *parent_folder_id,
     snprintf(query, sizeof(query),
              "SELECT CreateFolder('%s', '%s', '%s') AS Success", folder_name,
              parent_folder_id, user_name);
+
+    printf("Query: %s\n", query);
 
     if (mysql_query(conn, query))
     {
@@ -338,6 +342,8 @@ char *db_get_folder_id(const char *folder_name, const char *user_name,
     snprintf(query, sizeof(query),
              "SELECT GetFolderID('%s', '%s', '%s') AS folder_id", folder_name,
              user_name, parent_folder_id);
+
+    printf("Query: %s\n", query);
 
     if (mysql_query(conn, query))
     {
@@ -699,9 +705,9 @@ bool db_check_folder_exist(const char *folder_name, const char *user_name,
 
     char query[512];
     snprintf(query, sizeof(query),
-             "SELECT CheckFolderExist('%s', '%s', '%s') AS Exists", folder_name,
-             user_name, parent_folder_id);
-
+             "SELECT CheckFolderExist('%s', '%s', '%s') AS CheckFolderExist",
+             folder_name, user_name, parent_folder_id);
+    printf("Query: %s\n", query);
     if (mysql_query(conn, query))
     {
         printf("Check folder failed: %s\n", mysql_error(conn));

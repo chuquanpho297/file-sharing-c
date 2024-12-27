@@ -51,7 +51,7 @@ void print_message_oneline(int response_code, struct json_object *payload)
     struct json_object *message;
     json_object_object_get_ex(payload, "message", &message);
     const char *message_str = json_object_get_string(message);
-    printf("<%d>\n%s\n", response_code, message_str);
+    printf("<%d>: %s\n", response_code, message_str);
 }
 
 char *handle_response_chunk(int sock, int max_size)
@@ -122,4 +122,12 @@ void print_file_table(struct json_object *files)
                json_object_get_string(file_path));
     }
     // Print table rows
+}
+
+void fgets_not_newline(char *buffer, int size)
+{
+    if (fgets(buffer, size, stdin) != NULL)
+    {
+        buffer[strcspn(buffer, "\n")] = '\0';  // Remove trailing newline
+    }
 }

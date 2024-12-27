@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <zip.h>
 
+#include "../../utils/config.h"
 #include "../../utils/structs.h"
 
 void copy_file(const char *src_path, const char *dst_path)
@@ -251,7 +252,7 @@ bool compress_folder_to_zip(zip_t *zip, const char *folder_path,
     return true;
 }
 
-void create_directories(const char *path)
+bool create_directories(const char *path)
 {
     char tmp[MAX_PATH_LENGTH];
     snprintf(tmp, sizeof(tmp), "%s", path);
@@ -268,7 +269,11 @@ void create_directories(const char *path)
             struct stat st = {0};
             if (stat(tmp, &st) == -1)
             {
-                mkdir(tmp, 0755);
+                if (mkdir(tmp, 0755) == -1)
+                {
+                    printf("Failed to create directory: %s\n", tmp);
+                    return false;
+                }
             }
             *p = '/';
         }
@@ -276,8 +281,13 @@ void create_directories(const char *path)
     struct stat st = {0};
     if (stat(tmp, &st) == -1)
     {
-        mkdir(tmp, 0755);
+        if (mkdir(tmp, 0755) == -1)
+        {
+            printf("Failed to create directory: %s\n", tmp);
+            return false;
+        }
     }
+    return true;
 }
 
 void extract_zip(const char *zip_path, const char *dest_path)
@@ -351,7 +361,7 @@ void extract_zip(const char *zip_path, const char *dest_path)
 
 bool is_folder_exist(const char *folder_path)
 {
-    return opendir(folder_path) != NULL ? true : false;
+    return opendir(folder_path) != NULL;
 }
 
 void create_folder_if_not_exists(const char *folder_path)
@@ -389,6 +399,41 @@ const char *get_folder_name(const char *path)
     return last_slash + 1;
 }
 
+void get_last_two_elements(const char *input, char *result1, char *result2,
+                           char *delimiter)
+{
+    char buffer[MAX_PATH_LENGTH];
+    strncpy(buffer, input, sizeof(buffer));
+    buffer[sizeof(buffer) - 1] = '\0';
+
+    // Find the last two occurrences of '/'
+    char *last = strrchr(buffer, *delimiter);
+    if (last != NULL)
+    {
+        *last = '\0';  // Temporarily terminate the string at the last '/'
+        last = strrchr(buffer, *delimiter);
+        if (last != NULL)
+        {
+            // Copy the last two elements to the result variables
+            strcpy(result2, last + 1);  // Get the last element
+            *last = '\0';
+            strcpy(result1,
+                   buffer + strlen(buffer) -
+                       strlen(last + 1));  // Get the second last element
+        }
+    }
+}
+
+const char *get_folder_path(const char *file_path)
+{
+    const char *last_slash = strrchr(file_path, '/');
+    if (last_slash == NULL)
+    {
+        return NULL;  // No slash found, return NULL
+    }
+    return strndup(file_path, last_slash - file_path);
+}
+
 // Check if file exists
 bool file_exists(const char *filename) { return access(filename, F_OK) != -1; }
 
@@ -418,12 +463,31 @@ void receive_write_file(int socket, long file_size, FILE *fp)
     while (total_received < file_size &&
            (bytes_received = recv(socket, buffer, sizeof(buffer), 0)) > 0)
     {
-        fwrite(buffer, 1, bytes_received, fp);
+        if (bytes_received < 0)
+        {
+            perror("Failed to receive data");
+            break;
+        }
+
+        if (fwrite(buffer, 1, bytes_received, fp) != bytes_received)
+        {
+            perror("Failed to write data to file");
+            break;
+        }
+
         total_received += bytes_received;
+
         printf("Progress: %ld/%ld bytes\r", total_received, file_size);
         fflush(stdout);
-    }
 
+        // Send acknowledgment
+        if (send(socket, &bytes_received, sizeof(bytes_received), 0) < 0)
+        {
+            perror("Failed to send acknowledgment");
+            break;
+        }
+    }
+    printf("\n");
     fclose(fp);
 }
 
@@ -432,21 +496,41 @@ void read_send_file(int socket, long file_size, FILE *fp)
     char buffer[BUFFER_SIZE];
     int data;
     long byte_send = 0;
+    int send_data;
 
     while ((data = fread(buffer, 1, BUFFER_SIZE, fp)) > 0 &&
            byte_send < file_size)
     {
-        send(socket, buffer, data, 0);
-        byte_send += data;
+        if (data < 0)
+        {
+            perror("Failed to read data");
+            break;
+        }
+
+        if (send(socket, buffer, data, 0) < 0)
+        {
+            perror("Failed to send data");
+            break;
+        }
+
+        // Wait for acknowledgment
+        if (recv(socket, &send_data, sizeof(send_data), 0) < 0)
+        {
+            perror("Failed to receive acknowledgment");
+            break;
+        }
+
+        byte_send += send_data;
         printf("Progress: %ld/%ld bytes\r", byte_send, file_size);
         fflush(stdout);
     }
-    fclose(fp);
+    printf("\n");
+    // fclose(fp);
 }
 
 int count_files_in_folder(const char *folder_path)
 {
-    int file_count = 0;
+    int entry_count = 0;
     DIR *dir = opendir(folder_path);
     if (!dir)
     {
@@ -460,7 +544,7 @@ int count_files_in_folder(const char *folder_path)
     {
         if (entry->d_type == DT_REG)
         {
-            file_count++;
+            entry_count++;
         }
         else if (entry->d_type == DT_DIR)
         {
@@ -470,16 +554,16 @@ int count_files_in_folder(const char *folder_path)
                 char subfolder_path[MAX_PATH_LENGTH];
                 snprintf(subfolder_path, sizeof(subfolder_path), "%s/%s",
                          folder_path, entry->d_name);
-                int subfolder_file_count =
+                int subfolder_entry_count =
                     count_files_in_folder(subfolder_path);
-                if (subfolder_file_count != -1)
+                if (subfolder_entry_count != -1)
                 {
-                    file_count += subfolder_file_count;
+                    entry_count += subfolder_entry_count;
                 }
             }
         }
     }
 
     closedir(dir);
-    return file_count;
+    return entry_count;
 }

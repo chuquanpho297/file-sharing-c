@@ -22,5 +22,6 @@ char *handle_response_chunk(int sock, int max_size);
     }
 
 void print_file_table(struct json_object *files);
+void fgets_not_newline(char *buffer, int size);
 
 #endif  // HELPER_H
