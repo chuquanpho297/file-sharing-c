@@ -52,12 +52,17 @@ FileList *db_search_file(const char *file_name);
 FolderList *db_search_folder(const char *folder_name);
 
 // Access operations
-bool db_set_file_access(const char *file_id, const char *access);
-bool db_set_folder_access(const char *folder_id, const char *access);
+bool db_set_file_access(const char *file_id, const char *access, const char *user_name);
+bool db_set_folder_access(const char *folder_id, const char *access, const char *user_name);
 char *db_get_file_access(const char *file_id);
 char *db_get_folder_access(const char *folder_id);
 
 // Add to existing functions
 char *db_get_file_id(const char *file_name, const char *parent_folder_id);
+
+FileStruct *db_get_file_info(const char *file_id);
+
+char *db_get_file_path(const char *file_id);
+char *db_get_folder_path(const char *folder_id);
 
 #endif  // DB_ACCESS_H

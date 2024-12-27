@@ -710,7 +710,7 @@ void handle_folder_set_access(client_t *client, const char *buffer)
     const char *folder_id = json_object_get_string(folder_id_obj);
     const char *access = json_object_get_string(access_obj);
 
-    if (db_set_folder_access(folder_id, access))
+    if (db_set_folder_access(folder_id, access, client->username))
     {
         send_response(client->socket, 200,
                       "Folder access updated successfully");

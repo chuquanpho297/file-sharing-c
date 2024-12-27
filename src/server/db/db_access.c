@@ -342,9 +342,7 @@ char *db_get_folder_id(const char *folder_name, const char *user_name,
     snprintf(query, sizeof(query),
              "SELECT GetFolderID('%s', '%s', '%s') AS folder_id", folder_name,
              user_name, parent_folder_id);
-
     printf("Query: %s\n", query);
-
     if (mysql_query(conn, query))
     {
         printf("Get folder ID failed: %s\n", mysql_error(conn));
@@ -367,7 +365,7 @@ char *db_get_folder_id(const char *folder_name, const char *user_name,
         return NULL;
     }
     char *folder_id = row && row[0] ? strdup(row[0]) : NULL;
-
+    printf("Folder ID: %s\n", folder_id);
     mysql_free_result(result);
     db_disconnect(conn);
     return folder_id;
@@ -760,7 +758,6 @@ bool db_check_file_exist(const char *file_name, const char *user_name,
     if (!result)
     {
         printf("Check file failed: %s\n", mysql_error(conn));
-        printf("result: %s\n", result);
         db_disconnect(conn);
         return false;
     }
@@ -872,7 +869,8 @@ FolderList *db_search_folder(const char *folder_name)
     return list;
 }
 
-bool db_set_file_access(const char *file_id, const char *access)
+bool db_set_file_access(const char *file_id, const char *access,
+                        const char *user_name)
 {
     MYSQL *conn = db_connect();
     if (!conn)
@@ -880,7 +878,8 @@ bool db_set_file_access(const char *file_id, const char *access)
 
     char query[512];
     snprintf(query, sizeof(query),
-             "SELECT SetFileAccess('%s', '%s') AS Success", file_id, access);
+             "SELECT SetFileAccess('%s', '%s', '%s') AS Success", file_id,
+             access, user_name);
 
     if (mysql_query(conn, query))
     {
@@ -904,7 +903,8 @@ bool db_set_file_access(const char *file_id, const char *access)
     return success;
 }
 
-bool db_set_folder_access(const char *folder_id, const char *access)
+bool db_set_folder_access(const char *folder_id, const char *access,
+                          const char *user_name)
 {
     MYSQL *conn = db_connect();
     if (!conn)
@@ -912,8 +912,8 @@ bool db_set_folder_access(const char *folder_id, const char *access)
 
     char query[512];
     snprintf(query, sizeof(query),
-             "SELECT SetFolderAccess('%s', '%s') AS Success", folder_id,
-             access);
+             "SELECT SetFolderAccess('%s', '%s', '%s') AS Success", folder_id,
+             access, user_name);
 
     if (mysql_query(conn, query))
     {
@@ -975,7 +975,7 @@ char *db_get_file_access(const char *file_id)
         return NULL;
     }
     char *access = row && row[0] ? strdup(row[0]) : NULL;
-
+    printf("Access: %s\n", access);
     mysql_free_result(result);
     db_disconnect(conn);
     return access;
@@ -1183,6 +1183,7 @@ char *db_get_file_id(const char *file_name, const char *parent_folder_id)
 
     if (mysql_query(conn, query))
     {
+        printf("Get file ID failed: %s\n", mysql_error(conn));
         db_disconnect(conn);
         return NULL;
     }
@@ -1206,4 +1207,128 @@ char *db_get_file_id(const char *file_name, const char *parent_folder_id)
     mysql_free_result(result);
     db_disconnect(conn);
     return file_id;
+}
+
+FileStruct *db_get_file_info(const char *file_id)
+{
+    MYSQL *conn = db_connect();
+    if (!conn)
+        return NULL;
+
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT fileSize FROM File WHERE fileId = '%s'", file_id);
+
+    if (mysql_query(conn, query))
+    {
+        printf("Get file info failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+
+    if (!result)
+    {
+        printf("Get file info failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(result);
+
+    if (!row)
+    {
+        printf("Get file info failed: %s\n", mysql_error(conn));
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    FileStruct *file = malloc(sizeof(FileStruct));
+
+    file->file_id = strdup(file_id);
+    file->file_size = atol(row[0]);
+
+    printf("File size: %ld\n", file->file_size);
+
+    mysql_free_result(result);
+
+    db_disconnect(conn);
+
+    return file;
+}
+
+char *db_get_folder_path(const char *folder_id)
+{
+    MYSQL *conn = db_connect();
+    if (!conn)
+        return NULL;
+
+    char query[512];
+    snprintf(query, sizeof(query), "SELECT GetFolderPath('%s') AS path", folder_id);
+
+    if (mysql_query(conn, query))
+    {
+        printf("Get folder path failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Get folder path failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+    MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return NULL;
+    }
+    char *path = row && row[0] ? strdup(row[0]) : NULL;
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return path;
+}
+
+char *db_get_file_path(const char *file_id)
+{
+    MYSQL *conn = db_connect();
+    if (!conn)
+        return NULL;
+
+    char query[512];
+    snprintf(query, sizeof(query), "SELECT GetFilePath('%s') AS path", file_id);
+
+    if (mysql_query(conn, query))
+    {
+        printf("Get file path failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Get file path failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return NULL;
+    }
+    MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row)
+    {
+        mysql_free_result(result);
+        db_disconnect(conn);
+        return NULL;
+    }
+    char *path = row && row[0] ? strdup(row[0]) : NULL;
+
+    mysql_free_result(result);
+    db_disconnect(conn);
+    return path;
 }
