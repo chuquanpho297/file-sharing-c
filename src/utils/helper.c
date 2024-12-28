@@ -25,8 +25,7 @@ void send_response(int socket, int code, const char *message)
     struct json_object *jpayload = json_object_new_object();
 
     json_object_object_add(jobj, "responseCode", json_object_new_int(code));
-    json_object_object_add(jpayload, "message",
-                           json_object_new_string(message));
+    json_object_object_add(jpayload, "message", json_object_new_string(message));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *response_str = json_object_to_json_string(jobj);
@@ -35,8 +34,7 @@ void send_response(int socket, int code, const char *message)
     json_object_put(jobj);
 }
 
-void handle_print_payload_response(char *buffer,
-                                   PrintPayloadResponseFunc print_func)
+void handle_print_payload_response(char *buffer, PrintPayloadResponseFunc print_func)
 {
     struct json_object *parsed_json;
     struct json_object *response_code;
@@ -99,11 +97,11 @@ char *handle_response_chunk(int sock, int max_size)
 
 void print_file_table(struct json_object *files)
 {
-    printf("%-36s %-16s  %-6s  %-6s  %-9s  %-19s  %s \n", "File ID",
-           "File Name", "Size", "Access", "Created By", "Created At",
-           "File Path");
+    printf("%-36s %-16s  %-6s  %-6s  %-9s  %-19s  %s \n", "File ID", "File Name", "Size", "Access", "Created By",
+           "Created At", "File Path");
 
-    if (json_object_get_type(files) != json_type_array) {
+    if (json_object_get_type(files) != json_type_array)
+    {
         fprintf(stderr, "Error: Expected a JSON array\n");
         return;
     }
@@ -114,24 +112,16 @@ void print_file_table(struct json_object *files)
 
         struct json_object *file_id = json_object_object_get(file, "fileId");
 
-        struct json_object *file_name =
-            json_object_object_get(file, "fileName");
-        struct json_object *file_size =
-            json_object_object_get(file, "fileSize");
+        struct json_object *file_name = json_object_object_get(file, "fileName");
+        struct json_object *file_size = json_object_object_get(file, "fileSize");
         struct json_object *access = json_object_object_get(file, "access");
-        struct json_object *created_by =
-            json_object_object_get(file, "createdBy");
-        struct json_object *created_at =
-            json_object_object_get(file, "createdAt");
-        struct json_object *file_path =
-            json_object_object_get(file, "filePath");
-        printf(
-            "%-36s %-16s  %-6s  %-6s  %-9s  %-19s  %s\n",
-            json_object_get_string(file_id), json_object_get_string(file_name),
-            json_object_get_string(file_size), json_object_get_string(access),
-            json_object_get_string(created_by),
-            json_object_get_string(created_at),
-            json_object_get_string(file_path));
+        struct json_object *created_by = json_object_object_get(file, "createdBy");
+        struct json_object *created_at = json_object_object_get(file, "createdAt");
+        struct json_object *file_path = json_object_object_get(file, "filePath");
+        printf("%-36s %-16s  %-6s  %-6s  %-9s  %-19s  %s\n", json_object_get_string(file_id),
+               json_object_get_string(file_name), json_object_get_string(file_size), json_object_get_string(access),
+               json_object_get_string(created_by), json_object_get_string(created_at),
+               json_object_get_string(file_path));
     }
     // Print table rows
 }

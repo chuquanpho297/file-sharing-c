@@ -70,8 +70,7 @@ int main()
         client_t *client = malloc(sizeof(client_t));
         client->is_logged_in = 0;
 
-        if ((client->socket = accept(server_fd, (struct sockaddr *)&address,
-                                     (socklen_t *)&addrlen)) < 0)
+        if ((client->socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
         {
             perror("accept failed");
             free(client);
@@ -79,8 +78,7 @@ int main()
         }
 
         // Create new thread for client
-        if (pthread_create(&tid[client_count++], NULL, handle_client,
-                           (void *)client) != 0)
+        if (pthread_create(&tid[client_count++], NULL, handle_client, (void *)client) != 0)
         {
             perror("Failed to create thread");
             close(client->socket);

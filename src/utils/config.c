@@ -59,10 +59,8 @@ void load_config(Config *config)
     config->db_port = atoi(getenv_or_die("DB_PORT"));
     config->server_port = atoi(getenv_or_die("SERVER_PORT"));
     config->server_host = getenv_or_die("SERVER_HOST");
-    config->root_folder =
-        getenv("ROOT_FOLDER") ? getenv("ROOT_FOLDER") : "/root";
-    config->temp_folder =
-        getenv("TEMP_FOLDER") ? getenv("TEMP_FOLDER") : "/tmp";
+    config->root_folder = getenv("ROOT_FOLDER") ? getenv("ROOT_FOLDER") : "/root";
+    config->temp_folder = getenv("TEMP_FOLDER") ? getenv("TEMP_FOLDER") : "/tmp";
 }
 
 void load_env_from_file(const char *filename)

@@ -17,8 +17,7 @@
 void handle_file_create(client_t *client, const char *buffer)
 {
     struct json_object *parsed_json = json_tokener_parse(buffer);
-    struct json_object *payload, *file_name_obj, *file_size_obj,
-        *folder_path_obj;
+    struct json_object *payload, *file_name_obj, *file_size_obj, *folder_path_obj;
     json_object_object_get_ex(parsed_json, "payload", &payload);
     file_name_obj = json_object_object_get(payload, "fileName");
     file_size_obj = json_object_object_get(payload, "fileSize");
@@ -36,8 +35,7 @@ void handle_file_create(client_t *client, const char *buffer)
         while (token != NULL)
         {
             folder_name = token;
-            parent_id =
-                db_get_folder_id(folder_name, client->username, parent_id);
+            parent_id = db_get_folder_id(folder_name, client->username, parent_id);
             if (parent_id == NULL)
             {
                 send_response(client->socket, 404, "Folder not found");
@@ -52,13 +50,11 @@ void handle_file_create(client_t *client, const char *buffer)
     char file_path[MAX_PATH_LENGTH];
 
     Config *config = get_config();
-    snprintf(path, sizeof(path), "%s/%s/%s", config->root_folder,
-             client->username, folder_path);
+    snprintf(path, sizeof(path), "%s/%s/%s", config->root_folder, client->username, folder_path);
     mkdir(path, 0777);
 
     // Calculate required space
-    size_t required_len =
-        strlen(path) + strlen(file_name) + 2;  // +2 for '/' and null terminator
+    size_t required_len = strlen(path) + strlen(file_name) + 2;  // +2 for '/' and null terminator
     if (required_len > MAX_PATH_LENGTH)
     {
         send_response(client->socket, 400, "Path too long");
@@ -68,8 +64,7 @@ void handle_file_create(client_t *client, const char *buffer)
 
     // Safe concatenation
     snprintf(file_path, sizeof(file_path) + 1, "%s/%s", path, file_name);
-    int is_file_exists =
-        db_check_file_exist(file_name, client->username, parent_id);
+    int is_file_exists = db_check_file_exist(file_name, client->username, parent_id);
 
     if (is_file_exists)
     {
@@ -81,11 +76,10 @@ void handle_file_create(client_t *client, const char *buffer)
         struct json_object *answer;
         json_object_object_get_ex(tmp_json, "answer", &answer);
         const char *answer_str = json_object_get_string(answer);
-        if (strcmp(answer_str, "Y") != 0 && strcmp(answer_str, "y") != 0 &&
-            strcmp(answer_str, "N") != 0 && strcmp(answer_str, "n") != 0)
+        if (strcmp(answer_str, "Y") != 0 && strcmp(answer_str, "y") != 0 && strcmp(answer_str, "N") != 0 &&
+            strcmp(answer_str, "n") != 0)
         {
-            send_response(client->socket, 400,
-                          "Invalid answer. Please respond with Y/N");
+            send_response(client->socket, 400, "Invalid answer. Please respond with Y/N");
             json_object_put(tmp_json);
             json_object_put(parsed_json);
             return;
@@ -132,9 +126,11 @@ void handle_file_create(client_t *client, const char *buffer)
 
     json_object_put(parsed_json);
 }
-
+// TODO: change root to config->root_folder
 void handle_file_copy(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_path_obj, *to_folder_obj;
 
@@ -193,18 +189,16 @@ void handle_file_copy(client_t *client, const char *buffer)
 
     if (db_check_file_exist(file_name, client->username, to_folder_id))
     {
-        send_response(client->socket, 409,
-                      "File already exists in the destination folder");
+        send_response(client->socket, 409, "File already exists in the destination folder");
         json_object_put(parsed_json);
         return;
     }
 
     char src_path[MAX_PATH_LENGTH];
     char dest_path[MAX_PATH_LENGTH];
-    snprintf(src_path, sizeof(src_path), "root/%s/%s", client->username,
-             file_path_copy);
-    snprintf(dest_path, sizeof(dest_path), "root/%s/%s/%s", client->username,
-             to_folder_copy, file_name);
+    snprintf(src_path, sizeof(src_path), "%s/%s/%s", config->root_folder, client->username, file_path_copy);
+    snprintf(dest_path, sizeof(dest_path), "%s/%s/%s/%s", config->root_folder, client->username, to_folder_copy,
+             file_name);
 
     copy_file(src_path, dest_path);
 
@@ -222,6 +216,8 @@ void handle_file_copy(client_t *client, const char *buffer)
 
 void handle_file_move(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_path_obj, *to_folder_obj;
 
@@ -279,18 +275,16 @@ void handle_file_move(client_t *client, const char *buffer)
 
     if (db_check_file_exist(file_name, client->username, to_folder_id))
     {
-        send_response(client->socket, 409,
-                      "File already exists in the destination folder");
+        send_response(client->socket, 409, "File already exists in the destination folder");
         json_object_put(parsed_json);
         return;
     }
 
     char src_path[MAX_PATH_LENGTH];
     char dest_path[MAX_PATH_LENGTH];
-    snprintf(src_path, sizeof(src_path), "root/%s/%s", client->username,
-             file_path_copy);
-    snprintf(dest_path, sizeof(dest_path), "root/%s/%s/%s", client->username,
-             to_folder_copy, file_name);
+    snprintf(src_path, sizeof(src_path), "%s/%s/%s", config->root_folder, client->username, file_path_copy);
+    snprintf(dest_path, sizeof(dest_path), "%s/%s/%s/%s", config->root_folder, client->username, to_folder_copy,
+             file_name);
 
     move_file(src_path, dest_path);
 
@@ -305,9 +299,11 @@ void handle_file_move(client_t *client, const char *buffer)
 
     json_object_put(parsed_json);
 }
-
+// TODO: fix file rename
 void handle_file_rename(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_path_obj, *new_name_obj;
 
@@ -340,8 +336,7 @@ void handle_file_rename(client_t *client, const char *buffer)
         }
         else
         {
-            parent_id =
-                db_get_folder_id(file_name, client->username, parent_id);
+            parent_id = db_get_folder_id(file_name, client->username, parent_id);
             if (parent_id == NULL)
             {
                 send_response(client->socket, 404, "Folder not found");
@@ -354,9 +349,8 @@ void handle_file_rename(client_t *client, const char *buffer)
     char src_path[MAX_PATH_LENGTH];
     char dest_path[MAX_PATH_LENGTH];
     char *parentPath = db_get_folder_path(parent_id);
-    snprintf(src_path, sizeof(src_path), "root/%s/%s", client->username,
-             strdup(file_path));
-    snprintf(dest_path, sizeof(dest_path), "root/%s/%s", parentPath, new_name);
+    snprintf(src_path, sizeof(src_path), "%s/%s/%s", config->root_folder, client->username, strdup(file_path));
+    snprintf(dest_path, sizeof(dest_path), "%s/%s/%s", config->root_folder, parentPath, new_name);
     printf("src: %s\n", src_path);
     printf("dest: %s\n", dest_path);
 
@@ -383,6 +377,8 @@ void handle_file_rename(client_t *client, const char *buffer)
 
 void handle_file_delete(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_path_obj;
 
@@ -412,8 +408,7 @@ void handle_file_delete(client_t *client, const char *buffer)
         }
         else
         {
-            parent_id =
-                db_get_folder_id(file_name, client->username, parent_id);
+            parent_id = db_get_folder_id(file_name, client->username, parent_id);
             if (parent_id == NULL)
             {
                 send_response(client->socket, 404, "Folder not found");
@@ -423,8 +418,7 @@ void handle_file_delete(client_t *client, const char *buffer)
         }
     }
     char src_path[MAX_PATH_LENGTH];
-    snprintf(src_path, sizeof(src_path), "root/%s/%s", client->username,
-             strdup(file_path));
+    snprintf(src_path, sizeof(src_path), "%s/%s/%s", config->root_folder, client->username, strdup(file_path));
 
     if (remove(src_path) != 0)
     {
@@ -484,10 +478,8 @@ void handle_file_get_access(client_t *client, const char *buffer)
         struct json_object *response = json_object_new_object();
         struct json_object *resp_payload = json_object_new_object();
 
-        json_object_object_add(response, "responseCode",
-                               json_object_new_int(200));
-        json_object_object_add(resp_payload, "access",
-                               json_object_new_string(access));
+        json_object_object_add(response, "responseCode", json_object_new_int(200));
+        json_object_object_add(resp_payload, "access", json_object_new_string(access));
         json_object_object_add(response, "payload", resp_payload);
 
         const char *response_str = json_object_to_json_string(response);
@@ -524,34 +516,18 @@ void handle_file_search(client_t *client, const char *buffer)
         for (int i = 0; i < files->count; i++)
         {
             struct json_object *file = json_object_new_object();
-            json_object_object_add(
-                file, "fileId",
-                json_object_new_string(files->files[i].file_id));
-            json_object_object_add(
-                file, "fileName",
-                json_object_new_string(files->files[i].file_name));
-            json_object_object_add(
-                file, "fileSize",
-                json_object_new_int64(files->files[i].file_size));
-            json_object_object_add(
-                file, "access", json_object_new_string(files->files[i].access));
-            json_object_object_add(
-                file, "folderName",
-                json_object_new_string(files->files[i].folder_name));
-            json_object_object_add(
-                file, "createdBy",
-                json_object_new_string(files->files[i].created_by));
-            json_object_object_add(
-                file, "createdAt",
-                json_object_new_string(files->files[i].created_at));
-            json_object_object_add(
-                file, "filePath",
-                json_object_new_string(files->files[i].file_path));
+            json_object_object_add(file, "fileId", json_object_new_string(files->files[i].file_id));
+            json_object_object_add(file, "fileName", json_object_new_string(files->files[i].file_name));
+            json_object_object_add(file, "fileSize", json_object_new_int64(files->files[i].file_size));
+            json_object_object_add(file, "access", json_object_new_string(files->files[i].access));
+            json_object_object_add(file, "folderName", json_object_new_string(files->files[i].folder_name));
+            json_object_object_add(file, "createdBy", json_object_new_string(files->files[i].created_by));
+            json_object_object_add(file, "createdAt", json_object_new_string(files->files[i].created_at));
+            json_object_object_add(file, "filePath", json_object_new_string(files->files[i].file_path));
             json_object_array_add(files_array, file);
         }
 
-        json_object_object_add(response, "responseCode",
-                               json_object_new_int(200));
+        json_object_object_add(response, "responseCode", json_object_new_int(200));
         json_object_object_add(resp_payload, "files", files_array);
         json_object_object_add(response, "payload", resp_payload);
 
@@ -571,6 +547,8 @@ void handle_file_search(client_t *client, const char *buffer)
 
 void handle_file_download(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *file_path_obj, *file_owner_obj;
 
@@ -580,9 +558,7 @@ void handle_file_download(client_t *client, const char *buffer)
 
     const char *file_path = json_object_get_string(file_path_obj);
     const char *file_path_copy = strdup(file_path);
-    const char *file_owner = file_owner_obj
-                                 ? json_object_get_string(file_owner_obj)
-                                 : client->username;
+    const char *file_owner = file_owner_obj ? json_object_get_string(file_owner_obj) : client->username;
     printf("File owner: %s\n", file_owner);
     char *token = strtok((char *)file_path_copy, "/");
     char *parent_id = db_get_root_folder_id(file_owner);
@@ -628,16 +604,13 @@ void handle_file_download(client_t *client, const char *buffer)
     struct json_object *re_response = json_object_new_object();
     struct json_object *resp_payload = json_object_new_object();
 
-    json_object_object_add(re_response, "responseCode",
-                           json_object_new_int(200));
-    json_object_object_add(resp_payload, "fileSize",
-                           json_object_new_int64(file->file_size));
+    json_object_object_add(re_response, "responseCode", json_object_new_int(200));
+    json_object_object_add(resp_payload, "fileSize", json_object_new_int64(file->file_size));
     json_object_object_add(re_response, "payload", resp_payload);
 
     const char *response_str = json_object_to_json_string(re_response);
     char path[MAX_PATH_LENGTH];
-    snprintf(path, sizeof(path), "root/%s/%s/%s", file_owner, file_path_copy,
-             file_name);
+    snprintf(path, sizeof(path), "%s/%s/%s/%s", config->root_folder, file_owner, file_path_copy, file_name);
     printf("path: %s\n", path);
     FILE *fp = fopen(path, "rb");
 

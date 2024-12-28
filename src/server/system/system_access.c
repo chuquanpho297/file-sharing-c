@@ -75,10 +75,8 @@ bool copy_directory(const char *src_path, const char *dest_path)
             continue;
         }
 
-        snprintf(src_full_path, sizeof(src_full_path), "%s/%s", src_path,
-                 entry->d_name);
-        snprintf(dest_full_path, sizeof(dest_full_path), "%s/%s", dest_path,
-                 entry->d_name);
+        snprintf(src_full_path, sizeof(src_full_path), "%s/%s", src_path, entry->d_name);
+        snprintf(dest_full_path, sizeof(dest_full_path), "%s/%s", dest_path, entry->d_name);
 
         if (entry->d_type == DT_DIR)
         {
@@ -105,8 +103,7 @@ bool copy_directory(const char *src_path, const char *dest_path)
 bool copy_folder(const char *from_folder_path, const char *to_folder_path)
 {
     char dest_path[MAX_PATH_LENGTH];
-    snprintf(dest_path, sizeof(dest_path), "%s/%s", to_folder_path,
-             strrchr(from_folder_path, '/') + 1);
+    snprintf(dest_path, sizeof(dest_path), "%s/%s", to_folder_path, strrchr(from_folder_path, '/') + 1);
     return copy_directory(from_folder_path, dest_path);
 }
 
@@ -225,8 +222,7 @@ bool compress_folder(const char *folder_path, const char *zip_path)
     return result;
 }
 
-bool compress_folder_to_zip(zip_t *zip, const char *folder_path,
-                            const char *base_folder)
+bool compress_folder_to_zip(zip_t *zip, const char *folder_path, const char *base_folder)
 {
     DIR *dir = opendir(folder_path);
     if (!dir)
@@ -245,14 +241,12 @@ bool compress_folder_to_zip(zip_t *zip, const char *folder_path,
     {
         if (entry->d_type == DT_DIR)
         {
-            if (strcmp(entry->d_name, ".") == 0 ||
-                strcmp(entry->d_name, "..") == 0)
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             {
                 continue;
             }
             snprintf(path, sizeof(path), "%s/%s", folder_path, entry->d_name);
-            snprintf(zip_path, sizeof(zip_path), "%s/%s", base_folder,
-                     entry->d_name);
+            snprintf(zip_path, sizeof(zip_path), "%s/%s", base_folder, entry->d_name);
             if (!compress_folder_to_zip(zip, path, zip_path))
             {
                 closedir(dir);
@@ -262,8 +256,7 @@ bool compress_folder_to_zip(zip_t *zip, const char *folder_path,
         else
         {
             snprintf(path, sizeof(path), "%s/%s", folder_path, entry->d_name);
-            snprintf(zip_path, sizeof(zip_path), "%s/%s", base_folder,
-                     entry->d_name);
+            snprintf(zip_path, sizeof(zip_path), "%s/%s", base_folder, entry->d_name);
             file = fopen(path, "rb");
             if (!file)
             {
@@ -279,8 +272,7 @@ bool compress_folder_to_zip(zip_t *zip, const char *folder_path,
                 continue;
             }
 
-            if (zip_file_add(zip, zip_path, source,
-                             ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8) < 0)
+            if (zip_file_add(zip, zip_path, source, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8) < 0)
             {
                 printf("Failed to add file to ZIP: %s\n", path);
                 zip_source_free(source);
@@ -404,10 +396,7 @@ void extract_zip(const char *zip_path, const char *dest_path)
     zip_close(zip);
 }
 
-bool is_folder_exist(const char *folder_path)
-{
-    return opendir(folder_path) != NULL;
-}
+bool is_folder_exist(const char *folder_path) { return opendir(folder_path) != NULL; }
 
 void create_folder_if_not_exists(const char *folder_path)
 {
@@ -444,8 +433,7 @@ const char *get_folder_name(const char *path)
     return last_slash + 1;
 }
 
-void get_last_two_elements(const char *input, char *result1, char *result2,
-                           char *delimiter)
+void get_last_two_elements(const char *input, char *result1, char *result2, char *delimiter)
 {
     char buffer[MAX_PATH_LENGTH];
     strncpy(buffer, input, sizeof(buffer));
@@ -463,8 +451,7 @@ void get_last_two_elements(const char *input, char *result1, char *result2,
             strcpy(result2, last + 1);  // Get the last element
             *last = '\0';
             strcpy(result1,
-                   buffer + strlen(buffer) -
-                       strlen(last + 1));  // Get the second last element
+                   buffer + strlen(buffer) - strlen(last + 1));  // Get the second last element
         }
     }
 }
@@ -505,8 +492,7 @@ void receive_write_file(int socket, long file_size, FILE *fp)
     long total_received = 0;
     int bytes_received;
 
-    while (total_received < file_size &&
-           (bytes_received = recv(socket, buffer, sizeof(buffer), 0)) > 0)
+    while (total_received < file_size && (bytes_received = recv(socket, buffer, sizeof(buffer), 0)) > 0)
     {
         if (bytes_received < 0)
         {
@@ -543,8 +529,7 @@ void read_send_file(int socket, long file_size, FILE *fp)
     long byte_send = 0;
     int send_data;
 
-    while ((data = fread(buffer, 1, BUFFER_SIZE, fp)) > 0 &&
-           byte_send < file_size)
+    while ((data = fread(buffer, 1, BUFFER_SIZE, fp)) > 0 && byte_send < file_size)
     {
         if (data < 0)
         {
@@ -593,14 +578,11 @@ int count_files_in_folder(const char *folder_path)
         }
         else if (entry->d_type == DT_DIR)
         {
-            if (strcmp(entry->d_name, ".") != 0 &&
-                strcmp(entry->d_name, "..") != 0)
+            if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
             {
                 char subfolder_path[MAX_PATH_LENGTH];
-                snprintf(subfolder_path, sizeof(subfolder_path), "%s/%s",
-                         folder_path, entry->d_name);
-                int subfolder_entry_count =
-                    count_files_in_folder(subfolder_path);
+                snprintf(subfolder_path, sizeof(subfolder_path), "%s/%s", folder_path, entry->d_name);
+                int subfolder_entry_count = count_files_in_folder(subfolder_path);
                 if (subfolder_entry_count != -1)
                 {
                     entry_count += subfolder_entry_count;
@@ -691,8 +673,7 @@ bool remove_directory(const char *path)
     return result;
 }
 
-void log_operation(const char *username, const char *operation,
-                   const char *path, const char *status)
+void log_operation(const char *username, const char *operation, const char *path, const char *status)
 {
     FILE *log_file = fopen(LOG_FILE, "a");
     if (!log_file)
@@ -706,7 +687,6 @@ void log_operation(const char *username, const char *operation,
     char *date = ctime(&now);
     date[strlen(date) - 1] = '\0';  // Remove newline
 
-    fprintf(log_file, "[%s] User: %s, Operation: %s, Path: %s, Status: %s\n",
-            date, username, operation, path, status);
+    fprintf(log_file, "[%s] User: %s, Operation: %s, Path: %s, Status: %s\n", date, username, operation, path, status);
     fclose(log_file);
 }

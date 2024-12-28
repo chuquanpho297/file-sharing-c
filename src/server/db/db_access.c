@@ -27,9 +27,8 @@ MYSQL *db_connect(void)
 
     Config *config = get_config();
 
-    if (mysql_real_connect(connection, config->db_host, config->db_user,
-                           config->db_pass, config->db_name, config->db_port,
-                           NULL, 0) == NULL)
+    if (mysql_real_connect(connection, config->db_host, config->db_user, config->db_pass, config->db_name,
+                           config->db_port, NULL, 0) == NULL)
     {
         fprintf(stderr, "mysql_real_connect() failed\n");
         mysql_close(connection);
@@ -47,7 +46,9 @@ void db_disconnect(MYSQL *conn)
         connection = NULL;
     }
 }
-
+// TODO: <0>: (null)
+// <200>: Ready to receive file
+// TODO: SET_FILE_ACCESS error
 bool db_create_user(const char *user_name, const char *password)
 {
     MYSQL *conn = db_connect();
@@ -55,9 +56,7 @@ bool db_create_user(const char *user_name, const char *password)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "Select InsertNewUser('%s', '%s') AS Success;", user_name,
-             password);
+    snprintf(query, sizeof(query), "Select InsertNewUser('%s', '%s') AS Success;", user_name, password);
 
     if (mysql_query(conn, query))
     {
@@ -96,8 +95,7 @@ bool db_login(const char *user_name, const char *password)
     }
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT Login('%s', '%s') AS Success;",
-             user_name, password);
+    snprintf(query, sizeof(query), "SELECT Login('%s', '%s') AS Success;", user_name, password);
     if (mysql_query(conn, query))
     {
         printf("Login failed: %s\n", mysql_error(conn));
@@ -125,17 +123,15 @@ bool db_login(const char *user_name, const char *password)
     return success;
 }
 
-bool db_create_file(const char *file_name, long file_size,
-                    const char *folder_id, const char *user_name)
+bool db_create_file(const char *file_name, long file_size, const char *folder_id, const char *user_name)
 {
     MYSQL *conn = db_connect();
     if (!conn)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT CreateFile('%s', %ld, '%s', '%s') AS file_id", file_name,
-             file_size, folder_id, user_name);
+    snprintf(query, sizeof(query), "SELECT CreateFile('%s', %ld, '%s', '%s') AS file_id", file_name, file_size,
+             folder_id, user_name);
 
     printf("Query: %s\n", query);
 
@@ -167,8 +163,7 @@ bool db_create_file(const char *file_name, long file_size,
     return success;
 }
 
-bool db_create_folder(const char *folder_name, const char *parent_folder_id,
-                      const char *user_name)
+bool db_create_folder(const char *folder_name, const char *parent_folder_id, const char *user_name)
 {
     MYSQL *conn = db_connect();
     if (!conn)
@@ -178,9 +173,8 @@ bool db_create_folder(const char *folder_name, const char *parent_folder_id,
     }
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT CreateFolder('%s', '%s', '%s') AS Success", folder_name,
-             parent_folder_id, user_name);
+    snprintf(query, sizeof(query), "SELECT CreateFolder('%s', '%s', '%s') AS Success", folder_name, parent_folder_id,
+             user_name);
 
     printf("Query: %s\n", query);
 
@@ -221,8 +215,7 @@ char *db_get_root_folder_id(const char *user_name)
         return NULL;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT GetRootFolderID('%s') AS folder_id",
-             user_name);
+    snprintf(query, sizeof(query), "SELECT GetRootFolderID('%s') AS folder_id", user_name);
 
     if (mysql_query(conn, query))
     {
@@ -303,9 +296,7 @@ bool db_create_root_folder(const char *user_name)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT CreateRootFolder('%s', '%s') AS Success", user_name,
-             user_name);
+    snprintf(query, sizeof(query), "SELECT CreateRootFolder('%s', '%s') AS Success", user_name, user_name);
 
     if (mysql_query(conn, query))
     {
@@ -335,17 +326,15 @@ bool db_create_root_folder(const char *user_name)
     return success;
 }
 
-char *db_get_folder_id(const char *folder_name, const char *user_name,
-                       const char *parent_folder_id)
+char *db_get_folder_id(const char *folder_name, const char *user_name, const char *parent_folder_id)
 {
     MYSQL *conn = db_connect();
     if (!conn)
         return NULL;
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT GetFolderID('%s', '%s', '%s') AS folder_id", folder_name,
-             user_name, parent_folder_id);
+    snprintf(query, sizeof(query), "SELECT GetFolderID('%s', '%s', '%s') AS folder_id", folder_name, user_name,
+             parent_folder_id);
     printf("Query: %s\n", query);
     if (mysql_query(conn, query))
     {
@@ -423,9 +412,7 @@ bool db_copy_folder(const char *from_folder_id, const char *to_folder_id)
 
     // Retrieve properties of from_folder_id
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT folderName, createBy FROM Folder WHERE folderID = '%s'",
-             from_folder_id);
+    snprintf(query, sizeof(query), "SELECT folderName, createBy FROM Folder WHERE folderID = '%s'", from_folder_id);
 
     printf("Query: %s\n", query);
 
@@ -520,8 +507,7 @@ bool db_copy_folder(const char *from_folder_id, const char *to_folder_id)
     return true;
 }
 
-bool db_copy_all_content_folder(const char *from_folder_id,
-                                const char *to_folder_id)
+bool db_copy_all_content_folder(const char *from_folder_id, const char *to_folder_id)
 {
     MYSQL *conn = db_connect();
     if (!conn)
@@ -534,9 +520,7 @@ bool db_copy_all_content_folder(const char *from_folder_id,
 
     // First copy all files from source folder to destination folder
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT fName, fileSize, createBy FROM File WHERE folderID = '%s'",
-             from_folder_id);
+    snprintf(query, sizeof(query), "SELECT fName, fileSize, createBy FROM File WHERE folderID = '%s'", from_folder_id);
 
     printf("Query: %s\n", query);
 
@@ -731,17 +715,15 @@ cleanup:
 //     return success;
 // }
 
-bool db_move_folder(const char *folder_id, const char *parent_folder_id,
-                    const char *user_name)
+bool db_move_folder(const char *folder_id, const char *parent_folder_id, const char *user_name)
 {
     MYSQL *conn = db_connect();
     if (!conn)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT MoveFolder('%s', '%s', '%s') AS Success", folder_id,
-             parent_folder_id, user_name);
+    snprintf(query, sizeof(query), "SELECT MoveFolder('%s', '%s', '%s') AS Success", folder_id, parent_folder_id,
+             user_name);
 
     if (mysql_query(conn, query))
     {
@@ -775,9 +757,7 @@ bool db_delete_all_contents_folder(MYSQL *conn, const char *folder_id)
 {
     // First, recursively get and delete all subfolders
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT folderID FROM Folder WHERE parentFolderID = '%s'",
-             folder_id);
+    snprintf(query, sizeof(query), "SELECT folderID FROM Folder WHERE parentFolderID = '%s'", folder_id);
 
     printf("Query: %s\n", query);
 
@@ -807,8 +787,7 @@ bool db_delete_all_contents_folder(MYSQL *conn, const char *folder_id)
     mysql_free_result(result);
 
     // Delete all files in the current folder
-    snprintf(query, sizeof(query), "DELETE FROM File WHERE folderID = '%s'",
-             folder_id);
+    snprintf(query, sizeof(query), "DELETE FROM File WHERE folderID = '%s'", folder_id);
 
     if (mysql_query(conn, query))
     {
@@ -817,8 +796,7 @@ bool db_delete_all_contents_folder(MYSQL *conn, const char *folder_id)
     }
 
     // Delete the folder itself
-    snprintf(query, sizeof(query), "DELETE FROM Folder WHERE folderID = '%s'",
-             folder_id);
+    snprintf(query, sizeof(query), "DELETE FROM Folder WHERE folderID = '%s'", folder_id);
 
     if (mysql_query(conn, query))
     {
@@ -846,8 +824,7 @@ bool db_rename_folder(const char *folder_id, const char *new_name)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT RenameFolder('%s', '%s') AS Success",
-             folder_id, new_name);
+    snprintf(query, sizeof(query), "SELECT RenameFolder('%s', '%s') AS Success", folder_id, new_name);
 
     if (mysql_query(conn, query))
     {
@@ -884,8 +861,7 @@ FolderList *db_get_all_folder_in_folder(const char *folder_id)
         return NULL;
 
     char query[512];
-    snprintf(query, sizeof(query), "CALL GetAllFolderInFolder('%s')",
-             folder_id);
+    snprintf(query, sizeof(query), "CALL GetAllFolderInFolder('%s')", folder_id);
 
     if (mysql_query(conn, query))
     {
@@ -924,17 +900,15 @@ FolderList *db_get_all_folder_in_folder(const char *folder_id)
     return list;
 }
 
-bool db_check_folder_exist(const char *folder_name, const char *user_name,
-                           const char *parent_folder_id)
+bool db_check_folder_exist(const char *folder_name, const char *user_name, const char *parent_folder_id)
 {
     MYSQL *conn = db_connect();
     if (!conn)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT CheckFolderExist('%s', '%s', '%s') AS CheckFolderExist",
-             folder_name, user_name, parent_folder_id);
+    snprintf(query, sizeof(query), "SELECT CheckFolderExist('%s', '%s', '%s') AS CheckFolderExist", folder_name,
+             user_name, parent_folder_id);
     printf("Query: %s\n", query);
     if (mysql_query(conn, query))
     {
@@ -964,17 +938,15 @@ bool db_check_folder_exist(const char *folder_name, const char *user_name,
     return exists;
 }
 
-bool db_check_file_exist(const char *file_name, const char *user_name,
-                         const char *parent_folder_id)
+bool db_check_file_exist(const char *file_name, const char *user_name, const char *parent_folder_id)
 {
     MYSQL *conn = db_connect();
     if (!conn)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT CheckFileExists('%s', '%s', '%s') AS result", file_name,
-             user_name, parent_folder_id);
+    snprintf(query, sizeof(query), "SELECT CheckFileExists('%s', '%s', '%s') AS result", file_name, user_name,
+             parent_folder_id);
 
     if (mysql_query(conn, query))
     {
@@ -1099,17 +1071,14 @@ FolderList *db_search_folder(const char *folder_name)
     return list;
 }
 
-bool db_set_file_access(const char *file_id, const char *access,
-                        const char *user_name)
+bool db_set_file_access(const char *file_id, const char *access, const char *user_name)
 {
     MYSQL *conn = db_connect();
     if (!conn)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT SetFileAccess('%s', '%s', '%s') AS Success", file_id,
-             access, user_name);
+    snprintf(query, sizeof(query), "SELECT SetFileAccess('%s', '%s', '%s') AS Success", file_id, access, user_name);
 
     if (mysql_query(conn, query))
     {
@@ -1133,17 +1102,14 @@ bool db_set_file_access(const char *file_id, const char *access,
     return success;
 }
 
-bool db_set_folder_access(const char *folder_id, const char *access,
-                          const char *user_name)
+bool db_set_folder_access(const char *folder_id, const char *access, const char *user_name)
 {
     MYSQL *conn = db_connect();
     if (!conn)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT SetFolderAccess('%s', '%s', '%s') AS Success", folder_id,
-             access, user_name);
+    snprintf(query, sizeof(query), "SELECT SetFolderAccess('%s', '%s', '%s') AS Success", folder_id, access, user_name);
 
     if (mysql_query(conn, query))
     {
@@ -1180,8 +1146,7 @@ char *db_get_file_access(const char *file_id)
         return NULL;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT GetFileAccess('%s') AS access",
-             file_id);
+    snprintf(query, sizeof(query), "SELECT GetFileAccess('%s') AS access", file_id);
 
     if (mysql_query(conn, query))
     {
@@ -1218,8 +1183,7 @@ char *db_get_folder_access(const char *folder_id)
         return NULL;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT GetFolderAccess('%s') AS access",
-             folder_id);
+    snprintf(query, sizeof(query), "SELECT GetFolderAccess('%s') AS access", folder_id);
 
     if (mysql_query(conn, query))
     {
@@ -1256,8 +1220,7 @@ bool db_copy_file(const char *file_id, const char *to_folder_id)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT CopyFile('%s', '%s') AS new_file_id",
-             file_id, to_folder_id);
+    snprintf(query, sizeof(query), "SELECT CopyFile('%s', '%s') AS new_file_id", file_id, to_folder_id);
 
     if (mysql_query(conn, query))
     {
@@ -1294,8 +1257,7 @@ bool db_move_file(const char *file_id, const char *to_folder_id)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT MoveFile('%s', '%s') AS Success",
-             file_id, to_folder_id);
+    snprintf(query, sizeof(query), "SELECT MoveFile('%s', '%s') AS Success", file_id, to_folder_id);
 
     if (mysql_query(conn, query))
     {
@@ -1332,8 +1294,7 @@ bool db_rename_file(const char *file_id, const char *new_name)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT RenameFile('%s', '%s') AS Success",
-             file_id, new_name);
+    snprintf(query, sizeof(query), "SELECT RenameFile('%s', '%s') AS Success", file_id, new_name);
 
     if (mysql_query(conn, query))
     {
@@ -1370,8 +1331,7 @@ bool db_delete_file(const char *file_id)
         return false;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT DeleteFile('%s') AS Success",
-             file_id);
+    snprintf(query, sizeof(query), "SELECT DeleteFile('%s') AS Success", file_id);
 
     if (mysql_query(conn, query))
     {
@@ -1408,8 +1368,7 @@ char *db_get_file_id(const char *file_name, const char *parent_folder_id)
         return NULL;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT GetFileID('%s', '%s') AS file_id",
-             file_name, parent_folder_id);
+    snprintf(query, sizeof(query), "SELECT GetFileID('%s', '%s') AS file_id", file_name, parent_folder_id);
 
     if (mysql_query(conn, query))
     {
@@ -1446,8 +1405,7 @@ FileStruct *db_get_file_info(const char *file_id)
         return NULL;
 
     char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT fileSize FROM File WHERE fileId = '%s'", file_id);
+    snprintf(query, sizeof(query), "SELECT fileSize FROM File WHERE fileId = '%s'", file_id);
 
     if (mysql_query(conn, query))
     {
@@ -1496,8 +1454,7 @@ char *db_get_folder_path(const char *folder_id)
         return NULL;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT GetFolderPath('%s') AS path",
-             folder_id);
+    snprintf(query, sizeof(query), "SELECT GetFolderPath('%s') AS path", folder_id);
 
     if (mysql_query(conn, query))
     {

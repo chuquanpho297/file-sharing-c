@@ -1,3 +1,5 @@
+#include "client.h"
+
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <json-c/json.h>
@@ -12,7 +14,6 @@
 #include "./utils/helper.h"
 #include "./utils/structs.h"
 #include "utils/config.h"
-#include "client.h"
 
 int main()
 {
@@ -95,8 +96,7 @@ int main()
             scanf("%s", password);
             getchar();  // Consume newline
 
-            handle_login(sock, username, password, &is_logged_in, current_user,
-                         jobj);
+            handle_login(sock, username, password, &is_logged_in, current_user, jobj);
         }
         else if (strcmp(command, "REGISTER") == 0)
         {
@@ -113,8 +113,7 @@ int main()
             scanf("%s", password);
             getchar();  // Consume newline
 
-            handle_register(sock, username, password, &is_logged_in,
-                            current_user, jobj);
+            handle_register(sock, username, password, &is_logged_in, current_user, jobj);
         }
         // TODO: add FOLDER_CONTENT handler
         // else if (strcmp(command, "FOLDER_CONTENT") == 0)
@@ -291,8 +290,7 @@ int main()
             }
             printf("Folder path: %s\n", folder_path);
 
-            handle_folder_download_client(sock, folder_path, folder_owner,
-                                          des_folder_path, jobj);
+            handle_folder_download_client(sock, folder_path, folder_owner, des_folder_path, jobj);
         }
         else if (strcmp(command, "FOLDER_UPLOAD") == 0)
         {
@@ -312,8 +310,7 @@ int main()
             scanf("%s", folder_path);
             getchar();  // Consume newline
 
-            handle_folder_upload_client(sock, des_folder_path, folder_path,
-                                        jobj);
+            handle_folder_upload_client(sock, des_folder_path, folder_path, jobj);
         }
         else if (strcmp(command, "FILE_UPLOAD") == 0)
         {
@@ -540,18 +537,14 @@ int main()
     return 0;
 }
 
-void handle_login(int sock, const char *username, const char *password,
-                  int *is_logged_in, char *current_user,
+void handle_login(int sock, const char *username, const char *password, int *is_logged_in, char *current_user,
                   struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "userName",
-                           json_object_new_string(username));
-    json_object_object_add(jpayload, "password",
-                           json_object_new_string(password));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("LOGIN"));
+    json_object_object_add(jpayload, "userName", json_object_new_string(username));
+    json_object_object_add(jpayload, "password", json_object_new_string(password));
+    json_object_object_add(jobj, "messageType", json_object_new_string("LOGIN"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -583,18 +576,14 @@ void handle_login(int sock, const char *username, const char *password,
     json_object_put(parsed_json);  // Free the JSON object
 }
 
-void handle_register(int sock, const char *username, const char *password,
-                     int *is_logged_in, char *current_user,
+void handle_register(int sock, const char *username, const char *password, int *is_logged_in, char *current_user,
                      struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "userName",
-                           json_object_new_string(username));
-    json_object_object_add(jpayload, "password",
-                           json_object_new_string(password));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("REGISTER"));
+    json_object_object_add(jpayload, "userName", json_object_new_string(username));
+    json_object_object_add(jpayload, "password", json_object_new_string(password));
+    json_object_object_add(jobj, "messageType", json_object_new_string("REGISTER"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -629,8 +618,7 @@ void handle_register(int sock, const char *username, const char *password,
 void handle_logout(int sock, int *is_logged_in, char *current_user)
 {
     struct json_object *jobj = json_object_new_object();
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("LOGOUT"));
+    json_object_object_add(jobj, "messageType", json_object_new_string("LOGOUT"));
     const char *request = json_object_to_json_string(jobj);
     send(sock, request, strlen(request), 0);
 
@@ -708,21 +696,15 @@ void handle_logout(int sock, int *is_logged_in, char *current_user)
 //     }
 // }
 
-void handle_folder_create_client(int sock, const char *folder_path,
-                                 const char *folder_name,
-                                 struct json_object *jobj)
+void handle_folder_create_client(int sock, const char *folder_path, const char *folder_name, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
     if (folder_path != NULL)
-        json_object_object_add(jpayload, "folderPath",
-                               json_object_new_string(folder_path));
+        json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
     else
-        json_object_object_add(jpayload, "folderPath",
-                               json_object_new_string(""));
-    json_object_object_add(jpayload, "folderName",
-                           json_object_new_string(folder_name));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FOLDER_CREATE"));
+        json_object_object_add(jpayload, "folderPath", json_object_new_string(""));
+    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_CREATE"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -738,19 +720,14 @@ void handle_folder_create_client(int sock, const char *folder_path,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_folder_download_client(int sock, const char *folder_path,
-                                   const char *folder_owner,
-                                   const char *des_folder_path,
-                                   struct json_object *jobj)
+void handle_folder_download_client(int sock, const char *folder_path, const char *folder_owner,
+                                   const char *des_folder_path, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "folderPath",
-                           json_object_new_string(folder_path));
-    json_object_object_add(jpayload, "folderOwner",
-                           json_object_new_string(folder_owner));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FOLDER_DOWNLOAD"));
+    json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
+    json_object_object_add(jpayload, "folderOwner", json_object_new_string(folder_owner));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_DOWNLOAD"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -780,16 +757,13 @@ void handle_folder_download_client(int sock, const char *folder_path,
         struct json_object *zip_folder_name_obj;
 
         json_object_object_get_ex(payload, "fileSize", &file_size_obj);
-        json_object_object_get_ex(payload, "zipFoldername",
-                                  &zip_folder_name_obj);
+        json_object_object_get_ex(payload, "zipFoldername", &zip_folder_name_obj);
 
         long file_size = json_object_get_int64(file_size_obj);
-        const char *zip_folder_name =
-            json_object_get_string(zip_folder_name_obj);
+        const char *zip_folder_name = json_object_get_string(zip_folder_name_obj);
 
         char zip_folder_path[MAX_PATH_LENGTH];
-        snprintf(zip_folder_path, sizeof(zip_folder_path), "%s/%s",
-                 des_folder_path, zip_folder_name);
+        snprintf(zip_folder_path, sizeof(zip_folder_path), "%s/%s", des_folder_path, zip_folder_name);
 
         FILE *f = fopen(zip_folder_path, "wb");
         if (!f)
@@ -807,8 +781,7 @@ void handle_folder_download_client(int sock, const char *folder_path,
     json_object_put(parsed_json);  // Free the JSON object
 }
 
-void handle_folder_upload_client(int sock, const char *des_folder_path,
-                                 const char *upload_folder_path,
+void handle_folder_upload_client(int sock, const char *des_folder_path, const char *upload_folder_path,
                                  struct json_object *jobj)
 {
     if (!is_folder_exist(upload_folder_path))
@@ -822,14 +795,10 @@ void handle_folder_upload_client(int sock, const char *des_folder_path,
     const char *folder_name = get_folder_name(upload_folder_path);
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "folderName",
-                           json_object_new_string(folder_name));
-    json_object_object_add(jpayload, "folderPath",
-                           json_object_new_string(des_folder_path));
-    json_object_object_add(jpayload, "fileCount",
-                           json_object_new_int(file_count));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FOLDER_UPLOAD"));
+    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
+    json_object_object_add(jpayload, "folderPath", json_object_new_string(des_folder_path));
+    json_object_object_add(jpayload, "fileCount", json_object_new_int(file_count));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_UPLOAD"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -856,21 +825,17 @@ void handle_folder_upload_client(int sock, const char *des_folder_path,
     {
         printf("Upload start. Please wait!\n");
 
-        json_object_object_get_ex(payload, "validFolderName",
-                                  &valid_folder_name_obj);
-        const char *valid_folder_name =
-            json_object_get_string(valid_folder_name_obj);
+        json_object_object_get_ex(payload, "validFolderName", &valid_folder_name_obj);
+        const char *valid_folder_name = json_object_get_string(valid_folder_name_obj);
         char valid_des_folder_path[MAX_PATH_LENGTH];
 
         if (strlen(des_folder_path) == 0)
         {
-            snprintf(valid_des_folder_path, sizeof(valid_des_folder_path), "%s",
-                     valid_folder_name);
+            snprintf(valid_des_folder_path, sizeof(valid_des_folder_path), "%s", valid_folder_name);
         }
         else
         {
-            snprintf(valid_des_folder_path, sizeof(valid_des_folder_path),
-                     "%s/%s", des_folder_path, valid_folder_name);
+            snprintf(valid_des_folder_path, sizeof(valid_des_folder_path), "%s/%s", des_folder_path, valid_folder_name);
         }
 
         send_folder(sock, upload_folder_path, valid_des_folder_path);
@@ -883,8 +848,7 @@ void handle_folder_upload_client(int sock, const char *des_folder_path,
     json_object_put(parsed_json);  // Free the JSON object
 }
 
-void send_folder(int sock, const char *upload_folder_path,
-                 const char *des_folder_path)
+void send_folder(int sock, const char *upload_folder_path, const char *des_folder_path)
 {
     DIR *dir = opendir(upload_folder_path);
 
@@ -896,23 +860,18 @@ void send_folder(int sock, const char *upload_folder_path,
     {
         if (entry->d_type == DT_DIR)
         {
-            if (strcmp(entry->d_name, ".") == 0 ||
-                strcmp(entry->d_name, "..") == 0)
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             {
                 continue;
             }
-            snprintf(upload_path, sizeof(upload_path), "%s/%s",
-                     upload_folder_path, entry->d_name);
-            snprintf(des_path, sizeof(des_path), "%s/%s", des_folder_path,
-                     entry->d_name);
+            snprintf(upload_path, sizeof(upload_path), "%s/%s", upload_folder_path, entry->d_name);
+            snprintf(des_path, sizeof(des_path), "%s/%s", des_folder_path, entry->d_name);
             send_folder(sock, upload_path, des_path);
         }
         else
         {
-            snprintf(upload_path, sizeof(upload_path), "%s/%s",
-                     upload_folder_path, entry->d_name);
-            snprintf(des_path, sizeof(des_path), "%s/%s", des_folder_path,
-                     entry->d_name);
+            snprintf(upload_path, sizeof(upload_path), "%s/%s", upload_folder_path, entry->d_name);
+            snprintf(des_path, sizeof(des_path), "%s/%s", des_folder_path, entry->d_name);
 
             FILE *file = fopen(upload_path, "rb");
             if (!file)
@@ -927,10 +886,8 @@ void send_folder(int sock, const char *upload_folder_path,
             fseek(file, 0, SEEK_SET);
 
             struct json_object *jpayload = json_object_new_object();
-            json_object_object_add(jpayload, "filePath",
-                                   json_object_new_string(des_path));
-            json_object_object_add(jpayload, "fileSize",
-                                   json_object_new_int64(file_size));
+            json_object_object_add(jpayload, "filePath", json_object_new_string(des_path));
+            json_object_object_add(jpayload, "fileSize", json_object_new_int64(file_size));
             const char *jpayload_str = json_object_to_json_string(jpayload);
 
             send(sock, jpayload_str, strlen(jpayload_str), 0);
@@ -941,8 +898,7 @@ void send_folder(int sock, const char *upload_folder_path,
             struct json_object *parsed_json = json_tokener_parse(buffer);
             struct json_object *response_code_obj;
             struct json_object *payload_obj;
-            json_object_object_get_ex(parsed_json, "responseCode",
-                                      &response_code_obj);
+            json_object_object_get_ex(parsed_json, "responseCode", &response_code_obj);
             json_object_object_get_ex(parsed_json, "payload", &payload_obj);
 
             int response_code = json_object_get_int(response_code_obj);
@@ -962,17 +918,13 @@ void send_folder(int sock, const char *upload_folder_path,
     closedir(dir);
 }
 
-void handle_folder_rename_client(int sock, const char *folder_path,
-                                 const char *new_name, struct json_object *jobj)
+void handle_folder_rename_client(int sock, const char *folder_path, const char *new_name, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "folderPath",
-                           json_object_new_string(folder_path));
-    json_object_object_add(jpayload, "newFolderName",
-                           json_object_new_string(new_name));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FOLDER_RENAME"));
+    json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
+    json_object_object_add(jpayload, "newFolderName", json_object_new_string(new_name));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_RENAME"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -988,17 +940,13 @@ void handle_folder_rename_client(int sock, const char *folder_path,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_folder_copy_client(int sock, const char *from_folder,
-                               const char *to_folder, struct json_object *jobj)
+void handle_folder_copy_client(int sock, const char *from_folder, const char *to_folder, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "fromFolder",
-                           json_object_new_string(from_folder));
-    json_object_object_add(jpayload, "toFolder",
-                           json_object_new_string(to_folder));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FOLDER_COPY"));
+    json_object_object_add(jpayload, "fromFolder", json_object_new_string(from_folder));
+    json_object_object_add(jpayload, "toFolder", json_object_new_string(to_folder));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_COPY"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1014,17 +962,13 @@ void handle_folder_copy_client(int sock, const char *from_folder,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_folder_move_client(int sock, const char *from_folder,
-                               const char *to_folder, struct json_object *jobj)
+void handle_folder_move_client(int sock, const char *from_folder, const char *to_folder, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "fromFolder",
-                           json_object_new_string(from_folder));
-    json_object_object_add(jpayload, "toFolder",
-                           json_object_new_string(to_folder));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FOLDER_MOVE"));
+    json_object_object_add(jpayload, "fromFolder", json_object_new_string(from_folder));
+    json_object_object_add(jpayload, "toFolder", json_object_new_string(to_folder));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_MOVE"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1040,15 +984,12 @@ void handle_folder_move_client(int sock, const char *from_folder,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_folder_delete_client(int sock, const char *folder_path,
-                                 struct json_object *jobj)
+void handle_folder_delete_client(int sock, const char *folder_path, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "folderPath",
-                           json_object_new_string(folder_path));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FOLDER_DELETE"));
+    json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_DELETE"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1064,15 +1005,12 @@ void handle_folder_delete_client(int sock, const char *folder_path,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_folder_search_client(int sock, const char *folder_name,
-                                 struct json_object *jobj)
+void handle_folder_search_client(int sock, const char *folder_name, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "folderName",
-                           json_object_new_string(folder_name));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FOLDER_SEARCH"));
+    json_object_object_add(jpayload, "folderName", json_object_new_string(folder_name));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FOLDER_SEARCH"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1088,37 +1026,26 @@ void handle_folder_search_client(int sock, const char *folder_name,
     struct json_object *payload;
     json_object_object_get_ex(parsed_json, "responseCode", &response_code);
     json_object_object_get_ex(parsed_json, "payload", &payload);
-    struct json_object *folder_content_array =
-        json_object_object_get(payload, "folders");
+    struct json_object *folder_content_array = json_object_object_get(payload, "folders");
 
-    printf("%-36s %-16s %-16s %-16s %s \n", "Folder Id", "Folder Name",
-           "Access", "Created By", "Folder Path");
+    printf("%-36s %-16s %-16s %-16s %s \n", "Folder Id", "Folder Name", "Access", "Created By", "Folder Path");
     int array_size = json_object_array_length(folder_content_array);
     for (int i = 0; i < array_size; i++)
     {
-        struct json_object *folder =
-            json_object_array_get_idx(folder_content_array, i);
-        struct json_object *folder_id =
-            json_object_object_get(folder, "folderId");
-        struct json_object *folder_name =
-            json_object_object_get(folder, "folderName");
+        struct json_object *folder = json_object_array_get_idx(folder_content_array, i);
+        struct json_object *folder_id = json_object_object_get(folder, "folderId");
+        struct json_object *folder_name = json_object_object_get(folder, "folderName");
         struct json_object *access = json_object_object_get(folder, "access");
-        struct json_object *created_at =
-            json_object_object_get(folder, "createdBy");
-        struct json_object *folder_path =
-            json_object_object_get(folder, "folderPath");
-        printf(
-            "%-36s %-16s %-16s %-16s %s \n", json_object_get_string(folder_id),
-            json_object_get_string(folder_name), json_object_get_string(access),
-            json_object_get_string(created_at),
-            json_object_get_string(folder_path));
+        struct json_object *created_at = json_object_object_get(folder, "createdBy");
+        struct json_object *folder_path = json_object_object_get(folder, "folderPath");
+        printf("%-36s %-16s %-16s %-16s %s \n", json_object_get_string(folder_id), json_object_get_string(folder_name),
+               json_object_get_string(access), json_object_get_string(created_at), json_object_get_string(folder_path));
     }
 
     json_object_put(parsed_json);
 }
 
-void handle_file_upload_client(int sock, const char *folder_path,
-                               const char *file_path, struct json_object *jobj)
+void handle_file_upload_client(int sock, const char *folder_path, const char *file_path, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
@@ -1134,17 +1061,12 @@ void handle_file_upload_client(int sock, const char *folder_path,
     fseek(file, 0, SEEK_SET);
 
     if (folder_path != NULL)
-        json_object_object_add(jpayload, "folderPath",
-                               json_object_new_string(folder_path));
+        json_object_object_add(jpayload, "folderPath", json_object_new_string(folder_path));
     else
-        json_object_object_add(jpayload, "folderPath",
-                               json_object_new_string(""));
-    json_object_object_add(jpayload, "fileName",
-                           json_object_new_string(get_filename(file_path)));
-    json_object_object_add(jpayload, "fileSize",
-                           json_object_new_int64(file_size));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FILE_UPLOAD"));
+        json_object_object_add(jpayload, "folderPath", json_object_new_string(""));
+    json_object_object_add(jpayload, "fileName", json_object_new_string(get_filename(file_path)));
+    json_object_object_add(jpayload, "fileSize", json_object_new_int64(file_size));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FILE_UPLOAD"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1178,8 +1100,7 @@ void handle_file_upload_client(int sock, const char *folder_path,
                 answer[0] = 'Y';
             }
             struct json_object *tmp = json_object_new_object();
-            json_object_object_add(tmp, "answer",
-                                   json_object_new_string(answer));
+            json_object_object_add(tmp, "answer", json_object_new_string(answer));
             const char *request = json_object_to_json_string(tmp);
             send(sock, request, strlen(request), 0);
             json_object_put(tmp);
@@ -1223,18 +1144,13 @@ void handle_file_upload_client(int sock, const char *folder_path,
     } while (!is_done);
 }
 
-void handle_file_download_client(int sock, const char *file_path,
-                                 const char *file_owner,
-                                 struct json_object *jobj)
+void handle_file_download_client(int sock, const char *file_path, const char *file_owner, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "filePath",
-                           json_object_new_string(file_path));
-    json_object_object_add(jpayload, "fileOwner",
-                           json_object_new_string(file_owner));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FILE_DOWNLOAD"));
+    json_object_object_add(jpayload, "filePath", json_object_new_string(file_path));
+    json_object_object_add(jpayload, "fileOwner", json_object_new_string(file_owner));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FILE_DOWNLOAD"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1305,17 +1221,13 @@ void handle_file_download_client(int sock, const char *file_path,
     }
 }
 
-void handle_file_rename_client(int sock, const char *file_path,
-                               const char *new_name, struct json_object *jobj)
+void handle_file_rename_client(int sock, const char *file_path, const char *new_name, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "filePath",
-                           json_object_new_string(file_path));
-    json_object_object_add(jpayload, "newFileName",
-                           json_object_new_string(new_name));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FILE_RENAME"));
+    json_object_object_add(jpayload, "filePath", json_object_new_string(file_path));
+    json_object_object_add(jpayload, "newFileName", json_object_new_string(new_name));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FILE_RENAME"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1331,17 +1243,13 @@ void handle_file_rename_client(int sock, const char *file_path,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_file_copy_client(int sock, const char *file_path,
-                             const char *to_folder, struct json_object *jobj)
+void handle_file_copy_client(int sock, const char *file_path, const char *to_folder, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "filePath",
-                           json_object_new_string(file_path));
-    json_object_object_add(jpayload, "toFolder",
-                           json_object_new_string(to_folder));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FILE_COPY"));
+    json_object_object_add(jpayload, "filePath", json_object_new_string(file_path));
+    json_object_object_add(jpayload, "toFolder", json_object_new_string(to_folder));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FILE_COPY"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1357,17 +1265,13 @@ void handle_file_copy_client(int sock, const char *file_path,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_file_move_client(int sock, const char *file_path,
-                             const char *to_folder, struct json_object *jobj)
+void handle_file_move_client(int sock, const char *file_path, const char *to_folder, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "filePath",
-                           json_object_new_string(file_path));
-    json_object_object_add(jpayload, "toFolder",
-                           json_object_new_string(to_folder));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FILE_MOVE"));
+    json_object_object_add(jpayload, "filePath", json_object_new_string(file_path));
+    json_object_object_add(jpayload, "toFolder", json_object_new_string(to_folder));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FILE_MOVE"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1383,15 +1287,12 @@ void handle_file_move_client(int sock, const char *file_path,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_file_delete_client(int sock, const char *file_path,
-                               struct json_object *jobj)
+void handle_file_delete_client(int sock, const char *file_path, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "filePath",
-                           json_object_new_string(file_path));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FILE_DELETE"));
+    json_object_object_add(jpayload, "filePath", json_object_new_string(file_path));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FILE_DELETE"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1407,15 +1308,12 @@ void handle_file_delete_client(int sock, const char *file_path,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_file_search_client(int sock, const char *file_name,
-                               struct json_object *jobj)
+void handle_file_search_client(int sock, const char *file_name, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "fileName",
-                           json_object_new_string(file_name));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("FILE_SEARCH"));
+    json_object_object_add(jpayload, "fileName", json_object_new_string(file_name));
+    json_object_object_add(jobj, "messageType", json_object_new_string("FILE_SEARCH"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1455,16 +1353,13 @@ char *clean_file_path(const char *path)
     return result;
 }
 
-void handle_set_folder_access(int sock, const char *folder_path,
-                              const char *access, struct json_object *jobj)
+void handle_set_folder_access(int sock, const char *folder_path, const char *access, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "folderId",
-                           json_object_new_string(folder_path));
+    json_object_object_add(jpayload, "folderId", json_object_new_string(folder_path));
     json_object_object_add(jpayload, "access", json_object_new_string(access));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("SET_FOLDER_ACCESS"));
+    json_object_object_add(jobj, "messageType", json_object_new_string("SET_FOLDER_ACCESS"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);
@@ -1480,16 +1375,13 @@ void handle_set_folder_access(int sock, const char *folder_path,
     handle_print_payload_response(buffer, print_message_oneline);
 }
 
-void handle_set_file_access(int sock, const char *file_path, const char *access,
-                            struct json_object *jobj)
+void handle_set_file_access(int sock, const char *file_path, const char *access, struct json_object *jobj)
 {
     struct json_object *jpayload = json_object_new_object();
 
-    json_object_object_add(jpayload, "fileId",
-                           json_object_new_string(file_path));
+    json_object_object_add(jpayload, "fileId", json_object_new_string(file_path));
     json_object_object_add(jpayload, "access", json_object_new_string(access));
-    json_object_object_add(jobj, "messageType",
-                           json_object_new_string("SET_FILE_ACCESS"));
+    json_object_object_add(jobj, "messageType", json_object_new_string("SET_FILE_ACCESS"));
     json_object_object_add(jobj, "payload", jpayload);
 
     const char *request = json_object_to_json_string(jobj);

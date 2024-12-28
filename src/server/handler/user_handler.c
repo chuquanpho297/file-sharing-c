@@ -54,8 +54,7 @@ void handle_register(client_t *client, const char *buffer)
         char path[1024];
         strncpy(client->username, username, MAX_USERNAME - 1);
         client->is_logged_in = 1;
-        snprintf(path, sizeof(path), "%s/%s", config->root_folder,
-                 client->username);
+        snprintf(path, sizeof(path), "%s/%s", config->root_folder, client->username);
         printf("%s\n", path);
         struct stat st = {0};
         if (stat(path, &st) == 0)
