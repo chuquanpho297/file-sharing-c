@@ -2,6 +2,7 @@
 
 #include <arpa/inet.h>
 #include <dirent.h>
+#include <errno.h>
 #include <json-c/json.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -323,7 +324,6 @@ void handle_folder_upload(client_t *client, const char *buffer)
         receive_write_file(client->socket, file_size, file);
 
         // Update db
-
         char *short_folder_path = get_folder_path(short_file_path);
         char *sub_parent_id =
             db_get_folder_id(folder_name, client->username, parent_id);
@@ -398,8 +398,16 @@ void handle_folder_download(client_t *client, const char *buffer)
     }
 
     const exact_folder_path[MAX_PATH_LENGTH];
-    snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
-             folder_owner, folder_path);
+
+    if (folder_path == "")
+    {
+        folder_name = client->username;
+        snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s", ROOT_FOLDER,
+                 folder_owner);
+    }
+    else
+        snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+                 folder_owner, folder_path);
 
     printf("Compressing folder...\n");
     // Check if temp_folder_path exists, if not, create it
@@ -454,7 +462,8 @@ void handle_folder_download(client_t *client, const char *buffer)
         json_object_put(response);
 
         char buffer[BUFFER_SIZE];
-        recv(client->socket, buffer, BUFFER_SIZE, 0);
+        int recv_len = recv(client->socket, buffer, BUFFER_SIZE, 0);
+        buffer[recv_len] = '\0';
 
         if (strcmp(buffer, "OK") != 0)
         {
@@ -508,6 +517,32 @@ void handle_folder_rename(client_t *client, const char *buffer)
         token = strtok(NULL, "/");
     }
 
+    // Construct the new folder path
+    const char *parent_folder_path = get_folder_path(folder_path);
+    char new_folder_path[MAX_PATH_LENGTH];
+    if (parent_folder_path == NULL)
+    {
+        snprintf(new_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+                 client->username, new_folder_name);
+    }
+    else
+        snprintf(new_folder_path, MAX_PATH_LENGTH, "%s/%s/%s/%s", ROOT_FOLDER,
+                 client->username, parent_folder_path, new_folder_name);
+
+    char exact_folder_path[MAX_PATH_LENGTH];
+    snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+             client->username, folder_path);
+
+    printf("Renaming folder %s to %s\n", exact_folder_path, new_folder_path);
+
+    if (rename(exact_folder_path, new_folder_path))
+    {
+        send_response(client->socket, 500, "Failed to rename folder");
+        json_object_put(parsed_json);
+        free(path_copy);
+        return;
+    }
+
     if (db_rename_folder(folder_id, new_folder_name))
     {
         send_response(client->socket, 200, "Folder renamed successfully");
@@ -533,30 +568,38 @@ void handle_folder_copy(client_t *client, const char *buffer)
     const char *from_folder = json_object_get_string(from_folder_obj);
     const char *to_folder = json_object_get_string(to_folder_obj);
 
-    char *path_copy = strdup(from_folder);
-    char *from_folder_name = NULL;
-    char *from_folder_id = db_get_root_folder_id(client->username);
-    while (path_copy != NULL)
+    // Check if to_folder contains from_folder
+    if (strstr(to_folder, from_folder) != NULL)
     {
-        from_folder_name = path_copy;
+        send_response(client->socket, 500,
+                      "Cannot copy a folder into itself or its subfolder");
+        json_object_put(parsed_json);
+        return;
+    }
+
+    char *path_copy = strdup(from_folder);
+    char *from_folder_id = db_get_root_folder_id(client->username);
+    char *from_folder_name = strtok(path_copy, "/");
+
+    while (from_folder_name != NULL)
+    {
         from_folder_id = db_get_folder_id(from_folder_name, client->username,
                                           from_folder_id);
         if (from_folder_id == NULL)
         {
             send_response(client->socket, 500, "Failed to copy folder");
             json_object_put(parsed_json);
-            free(path_copy);
+            free(from_folder_name);
             return;
         }
-        path_copy = strtok(NULL, "/");
+        from_folder_name = strtok(NULL, "/");
     }
 
     path_copy = strdup(to_folder);
-    char *to_folder_name = NULL;
+    char *to_folder_name = strtok(path_copy, "/");
     char *to_folder_id = db_get_root_folder_id(client->username);
-    while (path_copy != NULL)
+    while (to_folder_name != NULL)
     {
-        to_folder_name = path_copy;
         to_folder_id =
             db_get_folder_id(to_folder_name, client->username, to_folder_id);
         if (to_folder_id == NULL)
@@ -566,9 +609,12 @@ void handle_folder_copy(client_t *client, const char *buffer)
             free(path_copy);
             return;
         }
-        path_copy = strtok(NULL, "/");
+        to_folder_name = strtok(NULL, "/");
     }
-    if (db_check_folder_exist(to_folder_name, client->username, to_folder_id))
+
+    // check if from_folder_name is same name with subfolder of to_folder_name
+    if (db_check_folder_exist(get_folder_name(from_folder), client->username,
+                              to_folder_id))
     {
         send_response(client->socket, 500, "Folder already exists");
         json_object_put(parsed_json);
@@ -576,8 +622,26 @@ void handle_folder_copy(client_t *client, const char *buffer)
         return;
     }
 
-    if (db_copy_all_content_folder(from_folder_id, to_folder_id))
+    // copy folder in the system
+    char from_folder_path[MAX_PATH_LENGTH];
+    char to_folder_path[MAX_PATH_LENGTH];
+
+    snprintf(from_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+             client->username, from_folder);
+    snprintf(to_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+             client->username, to_folder);
+
+    if (!copy_folder(from_folder_path, to_folder_path))
     {
+        send_response(client->socket, 500, "Failed to copy folder");
+        json_object_put(parsed_json);
+        free(path_copy);
+        return;
+    }
+
+    if (db_copy_folder(from_folder_id, to_folder_id))
+    {
+        printf("Folder copied successfully");
         send_response(client->socket, 200, "Folder copied successfully");
     }
     else
@@ -588,6 +652,8 @@ void handle_folder_copy(client_t *client, const char *buffer)
     json_object_put(parsed_json);
     free(path_copy);
 }
+// TODO: add function to handle folder move
+// TODO: add log upload download
 
 void handle_folder_move(client_t *client, const char *buffer)
 {
@@ -671,18 +737,43 @@ void handle_folder_delete(client_t *client, const char *buffer)
     char *path_copy = strdup(folder_path);
     char *folder_name = NULL;
     char *folder_id = db_get_root_folder_id(client->username);
-    while (path_copy != NULL)
+
+    // Construct the new folder path
+    const exact_path[MAX_PATH_LENGTH];
+    if (path_copy == "")
     {
-        folder_name = path_copy;
+        snprintf(exact_path, MAX_PATH_LENGTH, "%s/%s", ROOT_FOLDER,
+                 client->username);
+    }
+    else
+        snprintf(exact_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+                 client->username, path_copy);
+
+    printf("Deleting folder %s\n", exact_path);
+
+    if (remove_directory(exact_path) != 0)
+    {
+        printf("Error code: %d\n", errno);
+        send_response(client->socket, 500, "Failed to delete folder");
+        json_object_put(parsed_json);
+        free(path_copy);
+        return;
+    }
+
+    char *token = strtok(path_copy, "/");
+
+    while (token != NULL)
+    {
+        folder_name = token;
         folder_id = db_get_folder_id(folder_name, client->username, folder_id);
         if (folder_id == NULL)
         {
             send_response(client->socket, 500, "Failed to delete folder");
             json_object_put(parsed_json);
-            free(path_copy);
+            free(token);
             return;
         }
-        path_copy = strtok(NULL, "/");
+        token = strtok(NULL, "/");
     }
 
     if (db_delete_folder(folder_id))
@@ -757,38 +848,6 @@ void handle_folder_get_access(client_t *client, const char *buffer)
     }
 
     json_object_put(parsed_json);
-}
-
-void handle_root_folder_create(const char *username)
-{
-    db_create_root_folder(username);
-}
-
-void handle_root_folder_get(client_t *client, const char *buffer)
-{
-    char *root_folder_id = db_get_root_folder_id(client->username);
-
-    if (root_folder_id)
-    {
-        struct json_object *response = json_object_new_object();
-        struct json_object *resp_payload = json_object_new_object();
-
-        json_object_object_add(response, "responseCode",
-                               json_object_new_int(200));
-        json_object_object_add(resp_payload, "rootFolderId",
-                               json_object_new_string(root_folder_id));
-        json_object_object_add(response, "payload", resp_payload);
-
-        const char *response_str = json_object_to_json_string(response);
-        send(client->socket, response_str, strlen(response_str), 0);
-
-        json_object_put(response);
-        free(root_folder_id);
-    }
-    else
-    {
-        send_response(client->socket, 404, "Root folder not found");
-    }
 }
 
 void handle_folder_search(client_t *client, const char *buffer)

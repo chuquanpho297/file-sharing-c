@@ -140,71 +140,71 @@ END //
 -- END
 
 
-CREATE FUNCTION CopyAllContentFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
-RETURNS BOOLEAN DETERMINISTIC
-BEGIN
-    DECLARE new_folder_id VARCHAR(255);
-    DECLARE done INT DEFAULT FALSE;
-    DECLARE cur_file_name VARCHAR(255);
-    DECLARE cur_file_size BIGINT;
-    DECLARE cur_folder_id VARCHAR(255);
+-- CREATE FUNCTION CopyAllContentFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
+-- RETURNS BOOLEAN DETERMINISTIC
+-- BEGIN
+--     DECLARE new_folder_id VARCHAR(255);
+--     DECLARE done INT DEFAULT FALSE;
+--     DECLARE cur_file_name VARCHAR(255);
+--     DECLARE cur_file_size BIGINT;
+--     DECLARE cur_folder_id VARCHAR(255);
 
-    -- Copy files from source folder to destination folder
-    DECLARE file_cursor CURSOR FOR 
-        SELECT fName, fileSize 
-        FROM File 
-        WHERE folderID = from_folder_id;
+--     -- Copy files from source folder to destination folder
+--     DECLARE file_cursor CURSOR FOR 
+--         SELECT fName, fileSize 
+--         FROM File 
+--         WHERE folderID = from_folder_id;
     
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+--     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
     
-    -- Copy files
-    OPEN file_cursor;
-    read_loop: LOOP
-        FETCH file_cursor INTO cur_file_name, cur_file_size;
-        IF done THEN
-            LEAVE read_loop;
-        END IF;
+--     -- Copy files
+--     OPEN file_cursor;
+--     read_loop: LOOP
+--         FETCH file_cursor INTO cur_file_name, cur_file_size;
+--         IF done THEN
+--             LEAVE read_loop;
+--         END IF;
         
-        -- Create new file entry
-        INSERT INTO File (fileID, folderID, fName, fileSize)
-        VALUES (UUID(), to_folder_id, cur_file_name, cur_file_size);
-    END LOOP;
-    CLOSE file_cursor;
+--         -- Create new file entry
+--         INSERT INTO File (fileID, folderID, fName, fileSize)
+--         VALUES (UUID(), to_folder_id, cur_file_name, cur_file_size);
+--     END LOOP;
+--     CLOSE file_cursor;
     
-    -- Copy subfolders recursively
-    SET done = FALSE;
-    BEGIN
-        DECLARE subfolder_cursor CURSOR FOR
-            SELECT folderID
-            FROM Folder
-            WHERE parentFolderID = from_folder_id;
+--     -- Copy subfolders recursively
+--     SET done = FALSE;
+--     BEGIN
+--         DECLARE subfolder_cursor CURSOR FOR
+--             SELECT folderID
+--             FROM Folder
+--             WHERE parentFolderID = from_folder_id;
             
-        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+--         DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
         
-        OPEN subfolder_cursor;
-        subfolder_loop: LOOP
-            FETCH subfolder_cursor INTO cur_folder_id;
-            IF done THEN
-                LEAVE subfolder_loop;
-            END IF;
+--         OPEN subfolder_cursor;
+--         subfolder_loop: LOOP
+--             FETCH subfolder_cursor INTO cur_folder_id;
+--             IF done THEN
+--                 LEAVE subfolder_loop;
+--             END IF;
             
-            -- Create new subfolder
-            SET new_folder_id = UUID();
-            INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createAt)
-            SELECT new_folder_id, folderName, to_folder_id, createBy, NOW()
-            FROM Folder
-            WHERE folderID = cur_folder_id;
+--             -- Create new subfolder
+--             SET new_folder_id = UUID();
+--             INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createAt)
+--             SELECT new_folder_id, folderName, to_folder_id, createBy, NOW()
+--             FROM Folder
+--             WHERE folderID = cur_folder_id;
             
-            -- Recursively copy contents of subfolder
-             IF NOT CopyFolder(cur_folder_id, new_folder_id) THEN
-                RETURN FALSE;
-            END IF;
-        END LOOP;
-        CLOSE subfolder_cursor;
-    END;
+--             -- Recursively copy contents of subfolder
+--              IF NOT CopyFolder(cur_folder_id, new_folder_id) THEN
+--                 RETURN FALSE;
+--             END IF;
+--         END LOOP;
+--         CLOSE subfolder_cursor;
+--     END;
     
-    RETURN TRUE;
-END //
+--     RETURN TRUE;
+-- END //
 
 CREATE FUNCTION MoveAllContentFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -276,16 +276,18 @@ BEGIN
             LEAVE read_loop;
         END IF;
         
-        IF NOT DeleteFolder(sub_folder_id) THEN
-            CLOSE folder_cursor;
-            RETURN FALSE;
-        END IF;
-    END LOOP;
+--         CALL DeleteFolder(sub_folder_id, result);
+--         IF NOT result THEN
+--             CLOSE folder_cursor;
+--             SET result = 0;
+--             LEAVE read_loop;
+--         END IF;
+--     END LOOP;
     
-    CLOSE folder_cursor;
+--     CLOSE folder_cursor;
     
-    -- Delete the folder itself
-    DELETE FROM Folder WHERE folderID = folder_id;
+--     -- Delete the folder itself
+--     DELETE FROM Folder WHERE folderID = folder_id;
     
     RETURN TRUE;
 END //

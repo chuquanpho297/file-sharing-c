@@ -1,6 +1,7 @@
 #include "system_access.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -10,59 +11,103 @@
 #include "../../utils/config.h"
 #include "../../utils/structs.h"
 
-void copy_file(const char *src_path, const char *dst_path)
+bool copy_file(const char *src_path, const char *dest_path)
 {
-    FILE *src = fopen(src_path, "rb");
-    FILE *dst = fopen(dst_path, "wb");
-
-    if (src && dst)
+    FILE *src_file = fopen(src_path, "rb");
+    if (!src_file)
     {
-        char buf[8192];
-        size_t n;
-        while ((n = fread(buf, 1, sizeof(buf), src)) > 0)
+        perror("Failed to open source file");
+        return false;
+    }
+
+    FILE *dest_file = fopen(dest_path, "wb");
+    if (!dest_file)
+    {
+        perror("Failed to open destination file");
+        fclose(src_file);
+        return false;
+    }
+
+    char buffer[BUFFER_SIZE];
+    size_t bytes;
+
+    while ((bytes = fread(buffer, 1, BUFFER_SIZE, src_file)) > 0)
+    {
+        if (fwrite(buffer, 1, bytes, dest_file) != bytes)
         {
-            fwrite(buf, 1, n, dst);
+            perror("Failed to write to destination file");
+            fclose(src_file);
+            fclose(dest_file);
+            return false;
         }
     }
 
-    if (src)
-        fclose(src);
-    if (dst)
-        fclose(dst);
+    fclose(src_file);
+    fclose(dest_file);
+    return true;
 }
 
-void copy_folder(const char *src_path, const char *dst_path)
+bool copy_directory(const char *src_path, const char *dest_path)
 {
     DIR *dir = opendir(src_path);
     if (!dir)
-        return;
-
-    mkdir(dst_path, 0777);
+    {
+        perror("Failed to open source directory");
+        return false;
+    }
 
     struct dirent *entry;
-    while ((entry = readdir(dir)))
+    char src_full_path[MAX_PATH_LENGTH];
+    char dest_full_path[MAX_PATH_LENGTH];
+
+    // Create the destination directory
+    if (mkdir(dest_path, 0755) != 0 && errno != EEXIST)
+    {
+        perror("Failed to create destination directory");
+        closedir(dir);
+        return false;
+    }
+
+    while ((entry = readdir(dir)) != NULL)
     {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-            continue;
-
-        char src[2048], dst[2048];
-        snprintf(src, sizeof(src), "%s/%s", src_path, entry->d_name);
-        snprintf(dst, sizeof(dst), "%s/%s", dst_path, entry->d_name);
-
-        struct stat st;
-        if (stat(src, &st) == 0)
         {
-            if (S_ISDIR(st.st_mode))
+            continue;
+        }
+
+        snprintf(src_full_path, sizeof(src_full_path), "%s/%s", src_path,
+                 entry->d_name);
+        snprintf(dest_full_path, sizeof(dest_full_path), "%s/%s", dest_path,
+                 entry->d_name);
+
+        if (entry->d_type == DT_DIR)
+        {
+            if (!copy_directory(src_full_path, dest_full_path))
             {
-                copy_folder(src, dst);
+                closedir(dir);
+                return false;
             }
-            else
+        }
+        else
+        {
+            if (!copy_file(src_full_path, dest_full_path))
             {
-                copy_file(src, dst);
+                closedir(dir);
+                return false;
             }
         }
     }
+
     closedir(dir);
+    return true;
+}
+
+bool copy_folder(const char *from_folder_path, const char *to_folder_path)
+{
+    char dest_path[MAX_PATH_LENGTH];
+    snprintf(dest_path, sizeof(dest_path), "%s/%s", to_folder_path,
+             strrchr(from_folder_path, '/') + 1);
+    return copy_directory(from_folder_path, dest_path);
 }
 
 void copy_all_contents_folder(const char *src_path, const char *dst_path)

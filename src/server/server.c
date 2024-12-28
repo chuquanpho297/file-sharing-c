@@ -180,7 +180,6 @@ void *handle_client(void *arg)
                 handle_folder_upload(client, buffer);
             }
             // File operations
-            // TODO: missing add upload file handler
             else if (strcmp(type, "FILE_UPLOAD") == 0)
             {
                 handle_file_create(client, buffer);

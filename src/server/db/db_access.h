@@ -26,8 +26,8 @@ bool db_copy_all_content_folder(const char *from_folder_id,
                                 const char *to_folder_id);
 bool db_move_all_content_folder(const char *from_folder_id,
                                 const char *to_folder_id);
-bool db_copy_folder(const char *folder_id, const char *parent_folder_id,
-                    const char *user_name);
+bool db_copy_folder(const char *from_folder_id, const char *to_folder_id);
+
 bool db_move_folder(const char *folder_id, const char *parent_folder_id,
                     const char *user_name);
 bool db_delete_folder(const char *folder_id);
@@ -52,8 +52,10 @@ FileList *db_search_file(const char *file_name);
 FolderList *db_search_folder(const char *folder_name);
 
 // Access operations
-bool db_set_file_access(const char *file_id, const char *access, const char *user_name);
-bool db_set_folder_access(const char *folder_id, const char *access, const char *user_name);
+bool db_set_file_access(const char *file_id, const char *access,
+                        const char *user_name);
+bool db_set_folder_access(const char *folder_id, const char *access,
+                          const char *user_name);
 char *db_get_file_access(const char *file_id);
 char *db_get_folder_access(const char *folder_id);
 

@@ -11,8 +11,9 @@
 #include <zip.h>
 
 // Function prototypes
-void copy_file(const char *src_path, const char *dst_path);
-void copy_folder(const char *src_path, const char *dst_path);
+bool copy_file(const char *src_path, const char *dest_path);
+bool copy_directory(const char *src_path, const char *dest_path);
+bool copy_folder(const char *from_folder_path, const char *to_folder_path);
 void copy_all_contents_folder(const char *src_path, const char *dst_path);
 void move_all_contents_folder(const char *src_path, const char *dst_path);
 void move_file(const char *src_path, const char *dst_path);

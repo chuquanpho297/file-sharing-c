@@ -1,10 +1,15 @@
 #include "helper.h"
 
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <json-c/json.h>
 #include <stdio.h>
+#include <stdlib.h>  // for malloc
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>   // for stat()
+#include <sys/types.h>  // for struct stat
+#include <unistd.h>     // for unlink()
 
 #include "structs.h"
 
@@ -133,4 +138,61 @@ void fgets_not_newline(char *buffer, int size)
     {
         buffer[strcspn(buffer, "\n")] = '\0';  // Remove trailing newline
     }
+}
+
+int remove_directory(const char *path)
+{
+    DIR *dir = opendir(path);
+    size_t path_len = strlen(path);
+    int result = -1;
+
+    if (dir)
+    {
+        struct dirent *entry;
+        result = 0;
+
+        while (!result && (entry = readdir(dir)))
+        {
+            char *buf;
+            size_t len;
+
+            // Skip the names "." and ".." as we don't want to recurse on them
+            if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+                continue;
+
+            len = path_len + strlen(entry->d_name) + 2;
+            buf = malloc(len);
+
+            if (buf)
+            {
+                struct stat statbuf;
+
+                snprintf(buf, len, "%s/%s", path, entry->d_name);
+
+                if (!stat(buf, &statbuf))
+                {
+                    if (S_ISDIR(statbuf.st_mode))
+                    {
+                        // Recursive call for directories
+                        result = remove_directory(buf);
+                    }
+                    else
+                    {
+                        // Remove regular files
+                        result = unlink(buf);
+                    }
+                }
+                free(buf);
+            }
+        }
+        closedir(dir);
+    }
+
+    if (!result)
+    {
+        // Remove the empty directory
+        result = rmdir(path);
+    }
+
+    return result;
 }

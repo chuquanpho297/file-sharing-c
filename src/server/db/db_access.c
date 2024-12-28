@@ -1,5 +1,6 @@
 #include "db_access.h"
 
+#include <mysql/mysql.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,7 +38,7 @@ MYSQL *db_connect(void)
 
 void db_disconnect(MYSQL *conn)
 {
-    if (conn != NULL)
+    if (conn != NULL && connection != NULL)
     {
         mysql_close(conn);
         connection = NULL;
@@ -411,6 +412,111 @@ char *db_get_parent_folder_id(const char *folder_name, const char *user_name)
     return parent_id;
 }
 
+bool db_copy_folder(const char *from_folder_id, const char *to_folder_id)
+{
+    MYSQL *conn = db_connect();
+    if (!conn)
+        return false;
+
+    // Retrieve properties of from_folder_id
+    char query[512];
+    snprintf(query, sizeof(query),
+             "SELECT folderName, createBy FROM Folder WHERE folderID = '%s'",
+             from_folder_id);
+
+    printf("Query: %s\n", query);
+
+    if (mysql_query(conn, query))
+    {
+        printf("Create new folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES *result1 = mysql_store_result(conn);
+    if (!result1)
+    {
+        printf("Create new folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(result1);
+    if (!row)
+    {
+        mysql_free_result(result1);
+        db_disconnect(conn);
+        return false;
+    }
+
+    char *folder_name = row[0];
+    char *create_by = row[1];
+    // Create new folder with the same properties but with to_folder_id as
+    // parent
+    snprintf(query, sizeof(query),
+             "INSERT INTO Folder (folderID, folderName, parentFolderID, "
+             "createBy, createAt) "
+             "VALUES (UUID(), '%s', '%s', '%s', NOW())",
+             folder_name, to_folder_id, create_by);
+
+    printf("Query: %s\n", query);
+
+    if (mysql_query(conn, query))
+    {
+        printf("Create new folder failed: %s\n", mysql_error(conn));
+        mysql_free_result(result1);
+        db_disconnect(conn);
+        return false;
+    }
+
+    snprintf(query, sizeof(query),
+             "SELECT folderID FROM Folder WHERE "
+             "folderName = '%s' AND parentFolderID = '%s'",
+             folder_name, to_folder_id);
+
+    printf("Query: %s\n", query);
+
+    if (mysql_query(conn, query))
+    {
+        printf("Create new folder failed: %s\n", mysql_error(conn));
+        mysql_free_result(result1);
+        db_disconnect(conn);
+        return false;
+    }
+
+    mysql_free_result(result1);
+
+    MYSQL_RES *result2 = mysql_store_result(conn);
+    if (!result2)
+    {
+        printf("Create new folder failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    row = mysql_fetch_row(result2);
+    if (!row)
+    {
+        mysql_free_result(result2);
+        db_disconnect(conn);
+        return false;
+    }
+
+    const char *new_folder_id = row[0];
+    printf("New folder ID: %s\n", new_folder_id);
+
+    if (!db_copy_all_content_folder(from_folder_id, new_folder_id))
+    {
+        mysql_free_result(result2);
+        db_disconnect(conn);
+        return false;
+    }
+
+    mysql_free_result(result2);
+    db_disconnect(conn);
+    return true;
+}
+
 bool db_copy_all_content_folder(const char *from_folder_id,
                                 const char *to_folder_id)
 {
@@ -418,36 +524,167 @@ bool db_copy_all_content_folder(const char *from_folder_id,
     if (!conn)
         return false;
 
+    bool success = true;  // Track overall success
+    MYSQL_RES *result = NULL;
+    MYSQL_RES *result2 = NULL;
+    MYSQL_RES *result3 = NULL;
+
+    // First copy all files from source folder to destination folder
     char query[512];
     snprintf(query, sizeof(query),
-             "SELECT CopyAllContentFolder('%s', '%s') AS Success",
-             from_folder_id, to_folder_id);
+             "SELECT fName, fileSize, createBy FROM File WHERE folderID = '%s'",
+             from_folder_id);
+
+    printf("Query: %s\n", query);
 
     if (mysql_query(conn, query))
     {
-        printf("Copy folder contents failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
+        printf("Get files failed: %s\n", mysql_error(conn));
+        success = false;
+        goto cleanup;
     }
 
-    MYSQL_RES *result = mysql_store_result(conn);
+    result = mysql_store_result(conn);
     if (!result)
     {
-        printf("Copy folder contents failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
+        printf("Get files failed: %s\n", mysql_error(conn));
+        success = false;
+        goto cleanup;
     }
-    MYSQL_ROW row = mysql_fetch_row(result);
-    if (!row)
-    {
-        mysql_free_result(result);
-        db_disconnect(conn);
-        return false;
-    }
-    bool success = (row && row[0] && row[0][0] == '1');
 
-    mysql_free_result(result);
-    db_disconnect(conn);
+    // Copy each file
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(result)))
+    {
+        char insert_query[512];
+        snprintf(insert_query, sizeof(insert_query),
+                 "INSERT INTO File (fileID, folderID, fName, fileSize, "
+                 "createBy, createAt) "
+                 "VALUES (UUID(), '%s', '%s', %s, '%s', NOW())",
+                 to_folder_id, row[0], row[1], row[2]);
+
+        printf("Query: %s\n", insert_query);
+
+        if (mysql_query(conn, insert_query))
+        {
+            printf("Copy file failed: %s\n", mysql_error(conn));
+            success = false;
+            goto cleanup;
+        }
+    }
+
+    // Now handle subfolders
+    snprintf(query, sizeof(query),
+             "SELECT folderID, folderName, createBy FROM Folder WHERE "
+             "parentFolderID = '%s'",
+             from_folder_id);
+
+    printf("Query: %s\n", query);
+
+    if (mysql_query(conn, query))
+    {
+        printf("Get subfolders failed: %s\n", mysql_error(conn));
+        success = false;
+        goto cleanup;
+    }
+
+    result2 = mysql_store_result(conn);
+    if (!result2)
+    {
+        printf("Get subfolders failed: %s\n", mysql_error(conn));
+        success = false;
+        goto cleanup;
+    }
+
+    // If there are no subfolders, we're done
+    if (mysql_num_rows(result2) == 0)
+    {
+        printf("No subfolders found, copy complete\n");
+        goto cleanup;  // This is a successful case
+    }
+
+    // Process each subfolder
+    while ((row = mysql_fetch_row(result2)))
+    {
+        // Create new subfolder
+        char create_folder_query[512];
+        snprintf(create_folder_query, sizeof(create_folder_query),
+                 "INSERT INTO Folder (folderID, folderName, parentFolderID, "
+                 "createBy, createAt) "
+                 "VALUES (UUID(), '%s', '%s', '%s', NOW())",
+                 row[1], to_folder_id, row[2]);
+
+        printf("Query: %s\n", create_folder_query);
+
+        if (mysql_query(conn, create_folder_query))
+        {
+            printf("Create subfolder failed: %s\n", mysql_error(conn));
+            success = false;
+            goto cleanup;
+        }
+
+        // Get the new folder's ID
+        char get_new_folder_query[512];
+        snprintf(get_new_folder_query, sizeof(get_new_folder_query),
+                 "SELECT folderID FROM Folder WHERE folderName = '%s' AND "
+                 "parentFolderID = '%s' "
+                 "ORDER BY createAt DESC LIMIT 1",
+                 row[1], to_folder_id);
+
+        printf("Query: %s\n", get_new_folder_query);
+
+        if (mysql_query(conn, get_new_folder_query))
+        {
+            printf("Get new folder ID failed: %s\n", mysql_error(conn));
+            success = false;
+            goto cleanup;
+        }
+
+        result3 = mysql_store_result(conn);
+        if (!result3)
+        {
+            printf("Get new folder ID failed: %s\n", mysql_error(conn));
+            success = false;
+            goto cleanup;
+        }
+
+        MYSQL_ROW id_row = mysql_fetch_row(result3);
+        if (!id_row || !id_row[0])
+        {
+            printf("Failed to get new folder ID\n");
+            success = false;
+            goto cleanup;
+        }
+
+        // Recursively copy contents of subfolder
+        char *new_folder_id = strdup(id_row[0]);
+        mysql_free_result(result3);
+        result3 = NULL;
+
+        if (!new_folder_id)
+        {
+            printf("Memory allocation failed\n");
+            success = false;
+            goto cleanup;
+        }
+
+        bool copy_success = db_copy_all_content_folder(row[0], new_folder_id);
+        free(new_folder_id);
+
+        if (!copy_success)
+        {
+            success = false;
+            goto cleanup;
+        }
+    }
+
+cleanup:
+    if (result3)
+        mysql_free_result(result3);
+    if (result2)
+        mysql_free_result(result2);
+    if (result)
+        mysql_free_result(result);
     return success;
 }
 
@@ -474,46 +711,6 @@ bool db_move_all_content_folder(const char *from_folder_id,
     if (!result)
     {
         printf("Move folder contents failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
-    }
-    MYSQL_ROW row = mysql_fetch_row(result);
-    if (!row)
-    {
-        mysql_free_result(result);
-        db_disconnect(conn);
-        return false;
-    }
-    bool success = (row && row[0] && row[0][0] == '1');
-
-    mysql_free_result(result);
-    db_disconnect(conn);
-    return success;
-}
-
-bool db_copy_folder(const char *folder_id, const char *parent_folder_id,
-                    const char *user_name)
-{
-    MYSQL *conn = db_connect();
-    if (!conn)
-        return false;
-
-    char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT CopyFolder('%s', '%s', '%s') AS Success", folder_id,
-             parent_folder_id, user_name);
-
-    if (mysql_query(conn, query))
-    {
-        printf("Copy folder failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
-    }
-
-    MYSQL_RES *result = mysql_store_result(conn);
-    if (!result)
-    {
-        printf("Copy folder failed: %s\n", mysql_error(conn));
         db_disconnect(conn);
         return false;
     }
@@ -577,8 +774,55 @@ bool db_delete_folder(const char *folder_id)
     if (!conn)
         return false;
 
+    // First, recursively get and delete all subfolders
     char query[512];
-    snprintf(query, sizeof(query), "SELECT DeleteFolder('%s') AS Success",
+    snprintf(query, sizeof(query),
+             "SELECT folderID FROM Folder WHERE parentFolderID = '%s'",
+             folder_id);
+
+    printf("Query: %s\n", query);
+
+    if (mysql_query(conn, query))
+    {
+        printf("Get subfolders failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+    {
+        printf("Get subfolders failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    // Recursively delete all subfolders
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(result)))
+    {
+        if (!db_delete_folder(row[0]))
+        {
+            mysql_free_result(result);
+            db_disconnect(conn);
+            return false;
+        }
+    }
+    mysql_free_result(result);
+
+    // Delete all files in the current folder
+    snprintf(query, sizeof(query), "DELETE FROM File WHERE folderID = '%s'",
+             folder_id);
+
+    if (mysql_query(conn, query))
+    {
+        printf("Delete files failed: %s\n", mysql_error(conn));
+        db_disconnect(conn);
+        return false;
+    }
+
+    // Delete the folder itself
+    snprintf(query, sizeof(query), "DELETE FROM Folder WHERE folderID = '%s'",
              folder_id);
 
     if (mysql_query(conn, query))
@@ -588,25 +832,8 @@ bool db_delete_folder(const char *folder_id)
         return false;
     }
 
-    MYSQL_RES *result = mysql_store_result(conn);
-    if (!result)
-    {
-        printf("Delete folder failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
-    }
-    MYSQL_ROW row = mysql_fetch_row(result);
-    if (!row)
-    {
-        mysql_free_result(result);
-        db_disconnect(conn);
-        return false;
-    }
-    bool success = (row && row[0] && row[0][0] == '1');
-
-    mysql_free_result(result);
     db_disconnect(conn);
-    return success;
+    return true;
 }
 
 bool db_rename_folder(const char *folder_id, const char *new_name)
@@ -1266,7 +1493,8 @@ char *db_get_folder_path(const char *folder_id)
         return NULL;
 
     char query[512];
-    snprintf(query, sizeof(query), "SELECT GetFolderPath('%s') AS path", folder_id);
+    snprintf(query, sizeof(query), "SELECT GetFolderPath('%s') AS path",
+             folder_id);
 
     if (mysql_query(conn, query))
     {

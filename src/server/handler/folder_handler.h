@@ -6,7 +6,6 @@
 #include "../../utils/structs.h"
 
 // Folder operations handlers
-void handle_root_folder_create(const char *username);
 void handle_folder_create(client_t *client, const char *buffer);
 void handle_folder_upload(client_t *client, const char *buffer);
 void handle_folder_download(client_t *client, const char *buffer);
@@ -22,6 +21,5 @@ void handle_folder_get_access(client_t *client, const char *buffer);
 
 // Search handlers
 void handle_folder_search(client_t *client, const char *buffer);
-void handle_root_folder_get(client_t *client, const char *buffer);
 
 #endif  // FOLDER_HANDLER_H
