@@ -37,5 +37,6 @@ int count_files_in_folder(const char *folder_path);
 void get_last_two_elements(const char *input, char *result1, char *result2,
                            char *delimiter);
 const char *get_folder_path(const char *file_path);
+bool move_folder(const char *from_folder_path, const char *to_folder_path);
 
 #endif  // SYSTEM_ACCESS_H

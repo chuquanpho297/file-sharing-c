@@ -652,7 +652,6 @@ void handle_folder_copy(client_t *client, const char *buffer)
     json_object_put(parsed_json);
     free(path_copy);
 }
-// TODO: add function to handle folder move
 // TODO: add log upload download
 
 void handle_folder_move(client_t *client, const char *buffer)
@@ -667,30 +666,38 @@ void handle_folder_move(client_t *client, const char *buffer)
     const char *from_folder = json_object_get_string(from_folder_obj);
     const char *to_folder = json_object_get_string(to_folder_obj);
 
-    char *path_copy = strdup(from_folder);
-    char *from_folder_name = NULL;
-    char *from_folder_id = db_get_root_folder_id(client->username);
-    while (path_copy != NULL)
+    // Check if to_folder contains from_folder
+    if (strstr(to_folder, from_folder) != NULL)
     {
-        from_folder_name = path_copy;
+        send_response(client->socket, 500,
+                      "Cannot move a folder into itself or its subfolder");
+        json_object_put(parsed_json);
+        return;
+    }
+
+    char *path_copy = strdup(from_folder);
+    char *from_folder_id = db_get_root_folder_id(client->username);
+    char *from_folder_name = strtok(path_copy, "/");
+
+    while (from_folder_name != NULL)
+    {
         from_folder_id = db_get_folder_id(from_folder_name, client->username,
                                           from_folder_id);
         if (from_folder_id == NULL)
         {
             send_response(client->socket, 500, "Failed to move folder");
             json_object_put(parsed_json);
-            free(path_copy);
+            free(from_folder_name);
             return;
         }
-        path_copy = strtok(NULL, "/");
+        from_folder_name = strtok(NULL, "/");
     }
 
     path_copy = strdup(to_folder);
-    char *to_folder_name = NULL;
+    char *to_folder_name = strtok(path_copy, "/");
     char *to_folder_id = db_get_root_folder_id(client->username);
-    while (path_copy != NULL)
+    while (to_folder_name != NULL)
     {
-        to_folder_name = path_copy;
         to_folder_id =
             db_get_folder_id(to_folder_name, client->username, to_folder_id);
         if (to_folder_id == NULL)
@@ -700,12 +707,33 @@ void handle_folder_move(client_t *client, const char *buffer)
             free(path_copy);
             return;
         }
-        path_copy = strtok(NULL, "/");
+        to_folder_name = strtok(NULL, "/");
     }
 
-    if (db_check_folder_exist(to_folder_name, client->username, to_folder_id))
+    // check if from_folder_name is same name with subfolder of to_folder_name
+    if (db_check_folder_exist(get_folder_name(from_folder), client->username,
+                              to_folder_id))
     {
         send_response(client->socket, 500, "Folder already exists");
+        json_object_put(parsed_json);
+        free(path_copy);
+        return;
+    }
+
+    // move folder in the system
+    char from_folder_path[MAX_PATH_LENGTH];
+    char to_folder_path[MAX_PATH_LENGTH];
+
+    snprintf(from_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+             client->username, from_folder);
+    snprintf(to_folder_path, MAX_PATH_LENGTH, "%s/%s/%s/%s", ROOT_FOLDER,
+             client->username, to_folder, get_folder_name(from_folder));
+
+    printf("Moving folder %s to %s\n", from_folder_path, to_folder_path);
+
+    if (move_folder(from_folder_path, to_folder_path) == 0)
+    {
+        send_response(client->socket, 500, "Failed to move folder");
         json_object_put(parsed_json);
         free(path_copy);
         return;

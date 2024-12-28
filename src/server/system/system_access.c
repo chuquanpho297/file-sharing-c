@@ -612,3 +612,13 @@ int count_files_in_folder(const char *folder_path)
     closedir(dir);
     return entry_count;
 }
+
+bool move_folder(const char *from_folder_path, const char *to_folder_path)
+{
+    if (rename(from_folder_path, to_folder_path) != 0)
+    {
+        perror("Failed to move folder");
+        return false;
+    }
+    return true;
+}
