@@ -24,8 +24,8 @@ char *db_get_folder_id(const char *folder_name, const char *user_name,
 char *db_get_parent_folder_id(const char *folder_name, const char *user_name);
 bool db_copy_all_content_folder(const char *from_folder_id,
                                 const char *to_folder_id);
-bool db_move_all_content_folder(const char *from_folder_id,
-                                const char *to_folder_id);
+// bool db_move_all_content_folder(const char *from_folder_id,
+//                                 const char *to_folder_id);
 bool db_copy_folder(const char *from_folder_id, const char *to_folder_id);
 
 bool db_move_folder(const char *folder_id, const char *parent_folder_id,

@@ -50,8 +50,10 @@ void handle_file_create(client_t *client, const char *buffer)
 
     char path[MAX_PATH_LENGTH];
     char file_path[MAX_PATH_LENGTH];
-    snprintf(path, sizeof(path), "%s/%s/%s", ROOT_FOLDER, client->username,
-             folder_path);
+
+    Config *config = get_config();
+    snprintf(path, sizeof(path), "%s/%s/%s", config->root_folder,
+             client->username, folder_path);
     mkdir(path, 0777);
 
     // Calculate required space

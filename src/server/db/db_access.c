@@ -25,8 +25,11 @@ MYSQL *db_connect(void)
         return NULL;
     }
 
-    if (mysql_real_connect(connection, DB_HOST, DB_USER, DB_PASS, DB_NAME,
-                           DB_PORT, NULL, 0) == NULL)
+    Config *config = get_config();
+
+    if (mysql_real_connect(connection, config->db_host, config->db_user,
+                           config->db_pass, config->db_name, config->db_port,
+                           NULL, 0) == NULL)
     {
         fprintf(stderr, "mysql_real_connect() failed\n");
         mysql_close(connection);
@@ -688,45 +691,45 @@ cleanup:
     return success;
 }
 
-bool db_move_all_content_folder(const char *from_folder_id,
-                                const char *to_folder_id)
-{
-    MYSQL *conn = db_connect();
-    if (!conn)
-        return false;
+// bool db_move_all_content_folder(const char *from_folder_id,
+//                                 const char *to_folder_id)
+// {
+//     MYSQL *conn = db_connect();
+//     if (!conn)
+//         return false;
 
-    char query[512];
-    snprintf(query, sizeof(query),
-             "SELECT MoveAllContentFolder('%s', '%s') AS Success",
-             from_folder_id, to_folder_id);
+//     char query[512];
+//     snprintf(query, sizeof(query),
+//              "SELECT MoveAllContentFolder('%s', '%s') AS Success",
+//              from_folder_id, to_folder_id);
 
-    if (mysql_query(conn, query))
-    {
-        printf("Move folder contents failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
-    }
+//     if (mysql_query(conn, query))
+//     {
+//         printf("Move folder contents failed: %s\n", mysql_error(conn));
+//         db_disconnect(conn);
+//         return false;
+//     }
 
-    MYSQL_RES *result = mysql_store_result(conn);
-    if (!result)
-    {
-        printf("Move folder contents failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
-        return false;
-    }
-    MYSQL_ROW row = mysql_fetch_row(result);
-    if (!row)
-    {
-        mysql_free_result(result);
-        db_disconnect(conn);
-        return false;
-    }
-    bool success = (row && row[0] && row[0][0] == '1');
+//     MYSQL_RES *result = mysql_store_result(conn);
+//     if (!result)
+//     {
+//         printf("Move folder contents failed: %s\n", mysql_error(conn));
+//         db_disconnect(conn);
+//         return false;
+//     }
+//     MYSQL_ROW row = mysql_fetch_row(result);
+//     if (!row)
+//     {
+//         mysql_free_result(result);
+//         db_disconnect(conn);
+//         return false;
+//     }
+//     bool success = (row && row[0] && row[0][0] == '1');
 
-    mysql_free_result(result);
-    db_disconnect(conn);
-    return success;
-}
+//     mysql_free_result(result);
+//     db_disconnect(conn);
+//     return success;
+// }
 
 bool db_move_folder(const char *folder_id, const char *parent_folder_id,
                     const char *user_name)

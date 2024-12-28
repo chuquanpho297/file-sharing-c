@@ -91,6 +91,8 @@ void handle_folder_content(client_t *client, const char *buffer)
 
 void handle_folder_create(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *folder_name_obj, *folder_path_obj;
 
@@ -130,11 +132,11 @@ void handle_folder_create(client_t *client, const char *buffer)
 
     char path[4096];
     if (folder_path && strlen(folder_path) > 0)
-        snprintf(path, sizeof(path), "%s/%s/%s/%s", ROOT_FOLDER,
+        snprintf(path, sizeof(path), "%s/%s/%s/%s", config->root_folder,
                  client->username, folder_path, folder_name);
     else
-        snprintf(path, sizeof(path), "%s/%s/%s", ROOT_FOLDER, client->username,
-                 folder_name);
+        snprintf(path, sizeof(path), "%s/%s/%s", config->root_folder,
+                 client->username, folder_name);
 
     struct stat st = {0};
     if (stat(path, &st) == 0)
@@ -168,6 +170,8 @@ void handle_folder_create(client_t *client, const char *buffer)
 
 void handle_folder_upload(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *folder_path_obj, *folder_name_obj,
         *file_number_obj;
@@ -220,10 +224,11 @@ void handle_folder_upload(client_t *client, const char *buffer)
 
     if (strlen(folder_path) > 0)
         snprintf(parent_upload_folder_path, sizeof(parent_upload_folder_path),
-                 "%s/%s/%s", ROOT_FOLDER, client->username, folder_path);
+                 "%s/%s/%s", config->root_folder, client->username,
+                 folder_path);
     else
         snprintf(parent_upload_folder_path, sizeof(parent_upload_folder_path),
-                 "%s/%s", ROOT_FOLDER, client->username);
+                 "%s/%s", config->root_folder, client->username);
 
     // Calculate required space
     size_t required_len = strlen(parent_upload_folder_path) +
@@ -297,8 +302,8 @@ void handle_folder_upload(client_t *client, const char *buffer)
         long file_size = json_object_get_int64(file_size_obj);
 
         char *file_path[MAX_PATH_LENGTH];
-        snprintf(file_path, sizeof(file_path) + 1, "%s/%s/%s", ROOT_FOLDER,
-                 client->username, short_file_path);
+        snprintf(file_path, sizeof(file_path) + 1, "%s/%s/%s",
+                 config->root_folder, client->username, short_file_path);
 
         // Create directories if they do not exist
         char *last_slash = strrchr(file_path, '/');
@@ -362,6 +367,8 @@ void handle_folder_upload(client_t *client, const char *buffer)
 
 void handle_folder_download(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *folder_path_obj, *folder_owner_obj;
 
@@ -402,17 +409,17 @@ void handle_folder_download(client_t *client, const char *buffer)
     if (folder_path == "")
     {
         folder_name = client->username;
-        snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s", ROOT_FOLDER,
-                 folder_owner);
+        snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s",
+                 config->root_folder, folder_owner);
     }
     else
-        snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
-                 folder_owner, folder_path);
+        snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s/%s",
+                 config->root_folder, folder_owner, folder_path);
 
     printf("Compressing folder...\n");
     // Check if temp_folder_path exists, if not, create it
     const char *temp_folder_path[MAX_PATH_LENGTH];
-    snprintf(temp_folder_path, MAX_PATH_LENGTH, "%s/%s", TEMP_FOLDER,
+    snprintf(temp_folder_path, MAX_PATH_LENGTH, "%s/%s", config->temp_folder,
              client->username);
 
     create_directories(temp_folder_path);
@@ -489,6 +496,8 @@ void handle_folder_download(client_t *client, const char *buffer)
 
 void handle_folder_rename(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *folder_path_obj, *new_folder_name_obj;
 
@@ -522,16 +531,17 @@ void handle_folder_rename(client_t *client, const char *buffer)
     char new_folder_path[MAX_PATH_LENGTH];
     if (parent_folder_path == NULL)
     {
-        snprintf(new_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
-                 client->username, new_folder_name);
+        snprintf(new_folder_path, MAX_PATH_LENGTH, "%s/%s/%s",
+                 config->root_folder, client->username, new_folder_name);
     }
     else
-        snprintf(new_folder_path, MAX_PATH_LENGTH, "%s/%s/%s/%s", ROOT_FOLDER,
-                 client->username, parent_folder_path, new_folder_name);
+        snprintf(new_folder_path, MAX_PATH_LENGTH, "%s/%s/%s/%s",
+                 config->root_folder, client->username, parent_folder_path,
+                 new_folder_name);
 
     char exact_folder_path[MAX_PATH_LENGTH];
-    snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
-             client->username, folder_path);
+    snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s/%s",
+             config->root_folder, client->username, folder_path);
 
     printf("Renaming folder %s to %s\n", exact_folder_path, new_folder_path);
 
@@ -558,6 +568,8 @@ void handle_folder_rename(client_t *client, const char *buffer)
 
 void handle_folder_copy(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *from_folder_obj, *to_folder_obj;
 
@@ -626,9 +638,9 @@ void handle_folder_copy(client_t *client, const char *buffer)
     char from_folder_path[MAX_PATH_LENGTH];
     char to_folder_path[MAX_PATH_LENGTH];
 
-    snprintf(from_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+    snprintf(from_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", config->root_folder,
              client->username, from_folder);
-    snprintf(to_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+    snprintf(to_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", config->root_folder,
              client->username, to_folder);
 
     if (!copy_folder(from_folder_path, to_folder_path))
@@ -656,6 +668,8 @@ void handle_folder_copy(client_t *client, const char *buffer)
 
 void handle_folder_move(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *from_folder_obj, *to_folder_obj;
 
@@ -724,10 +738,11 @@ void handle_folder_move(client_t *client, const char *buffer)
     char from_folder_path[MAX_PATH_LENGTH];
     char to_folder_path[MAX_PATH_LENGTH];
 
-    snprintf(from_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+    snprintf(from_folder_path, MAX_PATH_LENGTH, "%s/%s/%s", config->root_folder,
              client->username, from_folder);
-    snprintf(to_folder_path, MAX_PATH_LENGTH, "%s/%s/%s/%s", ROOT_FOLDER,
-             client->username, to_folder, get_folder_name(from_folder));
+    snprintf(to_folder_path, MAX_PATH_LENGTH, "%s/%s/%s/%s",
+             config->root_folder, client->username, to_folder,
+             get_folder_name(from_folder));
 
     printf("Moving folder %s to %s\n", from_folder_path, to_folder_path);
 
@@ -754,6 +769,8 @@ void handle_folder_move(client_t *client, const char *buffer)
 
 void handle_folder_delete(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *folder_path_obj;
 
@@ -785,7 +802,7 @@ void handle_folder_delete(client_t *client, const char *buffer)
     // Construct the new folder path
     const exact_path[MAX_PATH_LENGTH];
 
-    snprintf(exact_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+    snprintf(exact_path, MAX_PATH_LENGTH, "%s/%s/%s", config->root_folder,
              client->username, folder_path);
 
     printf("Deleting folder %s\n", exact_path);

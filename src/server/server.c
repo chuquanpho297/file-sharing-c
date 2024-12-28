@@ -16,18 +16,13 @@
 #include "./handler/user_handler.h"
 #include "db/db_access.h"
 
-// Database credentials
-const char *host = DB_HOST;
-const char *user = DB_USER;
-const char *password = DB_PASS;
-const char *db_name = DB_NAME;
-const unsigned int port = DB_PORT;
-
 // Function prototypes
 void *handle_client(void *arg);
 
 int main()
 {
+    Config *config = get_config();
+
     int server_fd;
     struct sockaddr_in address;
     int opt = 1;
@@ -51,7 +46,7 @@ int main()
 
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
+    address.sin_port = htons(config->server_port);
 
     // Bind socket
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
@@ -67,7 +62,7 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    printf("Server listening on port %d...\n", PORT);
+    printf("Server listening on port %d...\n", config->server_port);
 
     // Accept and handle client connections
     while (1)

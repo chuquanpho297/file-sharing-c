@@ -44,4 +44,4 @@ tags
 mysql_data
 init.sql
 
-src/utils/config.h
+.env

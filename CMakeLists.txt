@@ -13,6 +13,7 @@ pkg_check_modules(LIBZIP REQUIRED libzip)
 link_libraries(${JSONC_LIBRARIES} mysqlclient)
 
 file(GLOB HANDLER_SOURCES "src/server/handler/*.c")
+file(GLOB UTILS_SOURCES "src/utils/*.c")
 
 # Create executables
 add_executable(server
@@ -20,12 +21,9 @@ add_executable(server
     src/server/system/system_access.c
     src/server/server.c
     ${HANDLER_SOURCES} # Add handler sources
-    src/utils/helper.c
-    src/utils/structs.c
+    ${UTILS_SOURCES} # Add utility sources
 )
-add_executable(client src/client.c src/utils/helper.c src/server/system/system_access.c)
-
-add_executable(test src/test.c)
+add_executable(client src/client.c src/utils/helper.c src/server/system/system_access.c src/utils/config.c)
 
 # Add a custom target for formatting
 add_custom_target(format
@@ -40,4 +38,3 @@ include_directories(${JSONC_INCLUDE_DIRS})
 # Update link libraries
 target_link_libraries(server ${JSONC_LIBRARIES} ${LIBZIP_LIBRARIES} mysqlclient pthread)
 target_link_libraries(client ${JSONC_LIBRARIES} ${LIBZIP_LIBRARIES} pthread)
-target_link_libraries(test ${LIBZIP_LIBRARIES})

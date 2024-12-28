@@ -37,6 +37,8 @@ void handle_login(client_t *client, const char *buffer)
 
 void handle_register(client_t *client, const char *buffer)
 {
+    Config *config = get_config();
+
     struct json_object *parsed_json = json_tokener_parse(buffer);
     struct json_object *payload, *username_obj, *password_obj;
 
@@ -52,7 +54,8 @@ void handle_register(client_t *client, const char *buffer)
         char path[1024];
         strncpy(client->username, username, MAX_USERNAME - 1);
         client->is_logged_in = 1;
-        snprintf(path, sizeof(path), "%s/%s", ROOT_FOLDER, client->username);
+        snprintf(path, sizeof(path), "%s/%s", config->root_folder,
+                 client->username);
 
         struct stat st = {0};
         if (stat(path, &st) == 0)
