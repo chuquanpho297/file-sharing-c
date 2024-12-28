@@ -334,8 +334,7 @@ int main()
             char temp_buffer[MAX_PATH_LENGTH];
 
             printf("Upload at folder: ");
-            scanf("%s", temp_buffer);
-            getchar();
+            fgets_not_newline(temp_buffer, sizeof(temp_buffer));
             if (strlen(temp_buffer) > 0)
             {
                 // Remove trailing newline if present
@@ -1422,7 +1421,7 @@ void handle_file_search_client(int sock, const char *file_name,
     send(sock, request, strlen(request), 0);
 
     char *response = handle_response_chunk(sock, BUFFER_SIZE);
-    // TODO: Update print found files
+
     struct json_object *parsed_json;
     struct json_object *response_code;
     struct json_object *payload;

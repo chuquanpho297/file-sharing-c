@@ -12,7 +12,6 @@ Before you begin, ensure you have the following installed on your system:
   sudo apt-get update
   sudo apt-get install -y build-essential cmake libjson-c-dev libzip-dev libmysqlclient-dev clang-format
   ```
-
 ## Building the Project
 
 1. **Configure the Project**
@@ -20,6 +19,7 @@ Before you begin, ensure you have the following installed on your system:
    Use CMake to configure the project. This will generate the necessary build files:
 
    ```bash
+   cp .env.example .env
    mkdir build
    cd build
    cmake ..

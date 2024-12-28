@@ -120,10 +120,14 @@ void handle_file_create(client_t *client, const char *buffer)
             db_delete_file(file_id);
         }
         db_create_file(file_name, file_size, parent_id, client->username);
+
+        // Add logging
+        log_operation(client->username, "FILE_UPLOAD", file_path, "SUCCESS");
     }
     else
     {
         send_response(client->socket, 500, "Failed to create file");
+        log_operation(client->username, "FILE_UPLOAD", file_path, "FAILED");
     }
 
     json_object_put(parsed_json);
@@ -648,10 +652,14 @@ void handle_file_download(client_t *client, const char *buffer)
         {
             read_send_file(client->socket, file->file_size, fp);
         }
+
+        // Add logging
+        log_operation(client->username, "FILE_DOWNLOAD", file_path, "SUCCESS");
     }
     else
     {
         send_response(client->socket, 500, "Failed to open file");
+        log_operation(client->username, "FILE_DOWNLOAD", file_path, "FAILED");
     }
     // if (parent_id) {
     //     // Send file info and content to client

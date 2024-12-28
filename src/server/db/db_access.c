@@ -458,7 +458,7 @@ bool db_copy_folder(const char *from_folder_id, const char *to_folder_id)
     // parent
     snprintf(query, sizeof(query),
              "INSERT INTO Folder (folderID, folderName, parentFolderID, "
-             "createBy, createAt) "
+             "createBy, createdAt) "
              "VALUES (UUID(), '%s', '%s', '%s', NOW())",
              folder_name, to_folder_id, create_by);
 
@@ -562,7 +562,7 @@ bool db_copy_all_content_folder(const char *from_folder_id,
         char insert_query[512];
         snprintf(insert_query, sizeof(insert_query),
                  "INSERT INTO File (fileID, folderID, fName, fileSize, "
-                 "createBy, createAt) "
+                 "createBy, createdAt) "
                  "VALUES (UUID(), '%s', '%s', %s, '%s', NOW())",
                  to_folder_id, row[0], row[1], row[2]);
 
@@ -613,7 +613,7 @@ bool db_copy_all_content_folder(const char *from_folder_id,
         char create_folder_query[512];
         snprintf(create_folder_query, sizeof(create_folder_query),
                  "INSERT INTO Folder (folderID, folderName, parentFolderID, "
-                 "createBy, createAt) "
+                 "createBy, createdAt) "
                  "VALUES (UUID(), '%s', '%s', '%s', NOW())",
                  row[1], to_folder_id, row[2]);
 
@@ -631,7 +631,7 @@ bool db_copy_all_content_folder(const char *from_folder_id,
         snprintf(get_new_folder_query, sizeof(get_new_folder_query),
                  "SELECT folderID FROM Folder WHERE folderName = '%s' AND "
                  "parentFolderID = '%s' "
-                 "ORDER BY createAt DESC LIMIT 1",
+                 "ORDER BY createdAt DESC LIMIT 1",
                  row[1], to_folder_id);
 
         printf("Query: %s\n", get_new_folder_query);

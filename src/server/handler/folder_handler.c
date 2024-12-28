@@ -351,11 +351,16 @@ void handle_folder_upload(client_t *client, const char *buffer)
         db_create_file(get_filename(file_path), file_size, sub_parent_id,
                        client->username);
 
+        log_operation(client->username, "FILE_UPLOAD", file_path, "SUCCESS");
+
         file_count++;
         printf("File count: %d/%d\n", file_count, file_number);
 
         json_object_put(file_info);
     }
+
+    log_operation(client->username, "FOLDER_UPLOAD", upload_folder_path,
+                  "SUCCESS");
 
     send_response(client->socket, 200, "Folder uploaded successfully");
 
@@ -483,10 +488,16 @@ void handle_folder_download(client_t *client, const char *buffer)
 
         read_send_file(client->socket, file_size, fp);
         remove(temp_zip_folder_path);
+
+        // Add logging
+        log_operation(client->username, "FOLDER_DOWNLOAD", folder_path,
+                      "SUCCESS");
     }
     else
     {
         send_response(client->socket, 500, "Failed to download folder");
+        log_operation(client->username, "FOLDER_DOWNLOAD", folder_path,
+                      "FAILED");
     }
 
     json_object_put(parsed_json);

@@ -690,3 +690,23 @@ bool remove_directory(const char *path)
 
     return result;
 }
+
+void log_operation(const char *username, const char *operation,
+                   const char *path, const char *status)
+{
+    FILE *log_file = fopen(LOG_FILE, "a");
+    if (!log_file)
+    {
+        printf("Failed to open log file\n");
+        return;
+    }
+
+    time_t now;
+    time(&now);
+    char *date = ctime(&now);
+    date[strlen(date) - 1] = '\0';  // Remove newline
+
+    fprintf(log_file, "[%s] User: %s, Operation: %s, Path: %s, Status: %s\n",
+            date, username, operation, path, status);
+    fclose(log_file);
+}

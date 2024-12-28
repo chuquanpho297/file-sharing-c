@@ -15,7 +15,7 @@ CREATE TABLE `Folder` (
     `folderName` VARCHAR(255) NOT NULL,
     `parentFolderID` VARCHAR(255),
     `createBy` VARCHAR(255) NOT NULL,
-    `createAt` TIMESTAMP NOT NULL,
+    `createdAt` TIMESTAMP NOT NULL,
     `access` ENUM('private', 'view', 'download') DEFAULT 'view',
     `isRoot` BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (`folderID`),
@@ -29,7 +29,7 @@ CREATE TABLE `File` (
     `fName` VARCHAR(255) NOT NULL,
     `fileSize` BIGINT NOT NULL,
     `createBy` VARCHAR(255) NOT NULL,
-    `createAt` TIMESTAMP NOT NULL,
+    `createdAt` TIMESTAMP NOT NULL,
     `access` ENUM('private', 'view', 'download') DEFAULT 'view',
     PRIMARY KEY (`fileID`),
     CONSTRAINT `folderID` FOREIGN KEY (`folderID`) REFERENCES `Folder`(`folderID`)
@@ -94,7 +94,7 @@ BEGIN
         SET folder_id = UUID();
 
         -- Insert the new folder into the Folder table
-        INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createAt)
+        INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createdAt)
         VALUES (folder_id, folder_name, parent_folder_id, user_name, NOW());
 
         RETURN TRUE; -- Return TRUE for successful folder creation
@@ -104,7 +104,7 @@ END //
 CREATE FUNCTION CreateRootFolder(folder_name VARCHAR(255), user_name VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
 BEGIN
-    INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createAt, isRoot)
+    INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createdAt, isRoot)
     VALUES (UUID(), folder_name, NULL, user_name, NOW(), TRUE);
     RETURN TRUE;
 END //
@@ -129,103 +129,6 @@ BEGIN
     RETURN folder_id;
 END //
 
--- CREATE FUNCTION GetParentFolderID(folder_name VARCHAR(255), user_name VARCHAR(255))
--- RETURNS VARCHAR(255) DETERMINISTIC
--- BEGIN
---     DECLARE parent_folder_id VARCHAR(255);
---     SELECT parentFolderID INTO parent_folder_id
---     FROM Folder
---     WHERE folderName = folder_name AND createBy = user_name;
---     RETURN parent_folder_id;
--- END
-
-
--- CREATE FUNCTION CopyAllContentFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
--- RETURNS BOOLEAN DETERMINISTIC
--- BEGIN
---     DECLARE new_folder_id VARCHAR(255);
---     DECLARE done INT DEFAULT FALSE;
---     DECLARE cur_file_name VARCHAR(255);
---     DECLARE cur_file_size BIGINT;
---     DECLARE cur_folder_id VARCHAR(255);
-
---     -- Copy files from source folder to destination folder
---     DECLARE file_cursor CURSOR FOR 
---         SELECT fName, fileSize 
---         FROM File 
---         WHERE folderID = from_folder_id;
-    
---     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-    
---     -- Copy files
---     OPEN file_cursor;
---     read_loop: LOOP
---         FETCH file_cursor INTO cur_file_name, cur_file_size;
---         IF done THEN
---             LEAVE read_loop;
---         END IF;
-        
---         -- Create new file entry
---         INSERT INTO File (fileID, folderID, fName, fileSize)
---         VALUES (UUID(), to_folder_id, cur_file_name, cur_file_size);
---     END LOOP;
---     CLOSE file_cursor;
-    
---     -- Copy subfolders recursively
---     SET done = FALSE;
---     BEGIN
---         DECLARE subfolder_cursor CURSOR FOR
---             SELECT folderID
---             FROM Folder
---             WHERE parentFolderID = from_folder_id;
-            
---         DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-        
---         OPEN subfolder_cursor;
---         subfolder_loop: LOOP
---             FETCH subfolder_cursor INTO cur_folder_id;
---             IF done THEN
---                 LEAVE subfolder_loop;
---             END IF;
-            
---             -- Create new subfolder
---             SET new_folder_id = UUID();
---             INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createAt)
---             SELECT new_folder_id, folderName, to_folder_id, createBy, NOW()
---             FROM Folder
---             WHERE folderID = cur_folder_id;
-            
---             -- Recursively copy contents of subfolder
---              IF NOT CopyFolder(cur_folder_id, new_folder_id) THEN
---                 RETURN FALSE;
---             END IF;
---         END LOOP;
---         CLOSE subfolder_cursor;
---     END;
-    
---     RETURN TRUE;
--- END //
-
-CREATE FUNCTION MoveAllContentFolder(from_folder_id VARCHAR(255), to_folder_id VARCHAR(255))
-RETURNS BOOLEAN DETERMINISTIC
-BEGIN
-    -- Check if folders exist
-    IF NOT EXISTS (SELECT 1 FROM Folder WHERE folderID = from_folder_id) OR
-       NOT EXISTS (SELECT 1 FROM Folder WHERE folderID = to_folder_id) THEN
-        RETURN FALSE;
-    END IF;
-        
-    -- Update parent folder ID
-    UPDATE Folder SET parentFolderID = to_folder_id 
-    WHERE folderID = from_folder_id;
-    
-    -- If successful, commit and return true
-    IF ROW_COUNT() > 0 THEN
-        RETURN TRUE;
-    ELSE
-        RETURN FALSE;
-    END IF;
-END //
 
 CREATE FUNCTION RenameFolder(folder_id VARCHAR(255), new_name VARCHAR(255))
 RETURNS BOOLEAN DETERMINISTIC
@@ -252,46 +155,6 @@ BEGIN
     RETURN TRUE;
 END //
 
-CREATE FUNCTION DeleteFolder(folder_id VARCHAR(255))
-RETURNS BOOLEAN DETERMINISTIC
-BEGIN
-    DECLARE done INT DEFAULT FALSE;
-    DECLARE sub_folder_id VARCHAR(255);
-    
-    -- Cursor for subfolders
-    DECLARE folder_cursor CURSOR FOR 
-        SELECT folderID FROM Folder 
-        WHERE parentFolderID = folder_id;
-        
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
-        
-    -- Delete all files in the folder
-    DELETE FROM File WHERE folderID = folder_id;
-    
-    -- Recursively delete subfolders
-    OPEN folder_cursor;
-    read_loop: LOOP
-        FETCH folder_cursor INTO sub_folder_id;
-        IF done THEN
-            LEAVE read_loop;
-        END IF;
-        
---         CALL DeleteFolder(sub_folder_id, result);
---         IF NOT result THEN
---             CLOSE folder_cursor;
---             SET result = 0;
---             LEAVE read_loop;
---         END IF;
---     END LOOP;
-    
---     CLOSE folder_cursor;
-    
---     -- Delete the folder itself
---     DELETE FROM Folder WHERE folderID = folder_id;
-    
-    RETURN TRUE;
-END //
-
 -- File operations
 CREATE FUNCTION CreateFile(file_name VARCHAR(255), file_size BIGINT, folder_id VARCHAR(255), user_name VARCHAR(255))
 RETURNS VARCHAR(255) DETERMINISTIC
@@ -310,7 +173,7 @@ BEGIN
     
     -- Create new file
     SET new_file_id = UUID();
-    INSERT INTO File (fileID, folderID, fName, fileSize, createBy, createAt)
+    INSERT INTO File (fileID, folderID, fName, fileSize, createBy, createdAt)
     VALUES (new_file_id, folder_id, file_name, file_size, user_name, NOW());
     
     RETURN new_file_id;
@@ -446,7 +309,7 @@ BEGIN
         f.fileSize,
         fo.folderName,
         fo.createBy,
-        f.createAt,
+        f.createdAt,
         f.access,
         GetFilePath(f.fileID) as filePath
     FROM File f
@@ -505,16 +368,6 @@ END //
 CREATE PROCEDURE GetAllFolderInFolder(folder_id VARCHAR(255))
 BEGIN
     SELECT * FROM Folder WHERE parentFolderID = folder_id;
-END //
-
-CREATE FUNCTION CopyFolder(folder_id VARCHAR(255), parent_folder_id VARCHAR(255), user_name VARCHAR(255))
-RETURNS BOOLEAN DETERMINISTIC
-BEGIN
-    INSERT INTO Folder (folderID, folderName, parentFolderID, createBy, createAt)
-    SELECT UUID(), folderName, parent_folder_id, user_name, NOW()
-    FROM Folder
-    WHERE folderID = folder_id;
-    RETURN TRUE;
 END //
 
 CREATE FUNCTION MoveFolder(folder_id VARCHAR(255), parent_folder_id VARCHAR(255), user_name VARCHAR(255))

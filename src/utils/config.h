@@ -22,6 +22,7 @@ typedef struct
 #define MAX_FOLDER_NAME 32
 #define MAX_PATH_LENGTH 4096
 #define MAX_COMMAND_LENGTH 1024
+#define LOG_FILE "file-sharing.log"
 
 Config *get_config();
 const char *getenv_or_die(const char *name);
