@@ -766,28 +766,6 @@ void handle_folder_delete(client_t *client, const char *buffer)
     char *folder_name = NULL;
     char *folder_id = db_get_root_folder_id(client->username);
 
-    // Construct the new folder path
-    const exact_path[MAX_PATH_LENGTH];
-    if (path_copy == "")
-    {
-        snprintf(exact_path, MAX_PATH_LENGTH, "%s/%s", ROOT_FOLDER,
-                 client->username);
-    }
-    else
-        snprintf(exact_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
-                 client->username, path_copy);
-
-    printf("Deleting folder %s\n", exact_path);
-
-    if (remove_directory(exact_path) != 0)
-    {
-        printf("Error code: %d\n", errno);
-        send_response(client->socket, 500, "Failed to delete folder");
-        json_object_put(parsed_json);
-        free(path_copy);
-        return;
-    }
-
     char *token = strtok(path_copy, "/");
 
     while (token != NULL)
@@ -802,6 +780,23 @@ void handle_folder_delete(client_t *client, const char *buffer)
             return;
         }
         token = strtok(NULL, "/");
+    }
+
+    // Construct the new folder path
+    const exact_path[MAX_PATH_LENGTH];
+
+    snprintf(exact_path, MAX_PATH_LENGTH, "%s/%s/%s", ROOT_FOLDER,
+             client->username, folder_path);
+
+    printf("Deleting folder %s\n", exact_path);
+
+    if (!remove_directory(exact_path))
+    {
+        printf("Error code: %d\n", errno);
+        send_response(client->socket, 500, "Failed to delete folder");
+        json_object_put(parsed_json);
+        free(path_copy);
+        return;
     }
 
     if (db_delete_folder(folder_id))

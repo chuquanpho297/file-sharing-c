@@ -622,3 +622,71 @@ bool move_folder(const char *from_folder_path, const char *to_folder_path)
     }
     return true;
 }
+
+bool remove_directory(const char *path)
+{
+    DIR *dir = opendir(path);
+    size_t path_len = strlen(path);
+    bool result = true;
+
+    if (dir)
+    {
+        struct dirent *entry;
+
+        while (result && (entry = readdir(dir)))
+        {
+            char *buf;
+            size_t len;
+
+            // Skip the names "." and ".." as we don't want to recurse on them
+            if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+                continue;
+
+            len = path_len + strlen(entry->d_name) + 2;
+            buf = malloc(len);
+
+            if (buf)
+            {
+                struct stat statbuf;
+
+                snprintf(buf, len, "%s/%s", path, entry->d_name);
+
+                if (!stat(buf, &statbuf))
+                {
+                    if (S_ISDIR(statbuf.st_mode))
+                    {
+                        // Recursive call for directories
+                        result = remove_directory(buf);
+                    }
+                    else
+                    {
+                        // Remove regular files
+                        result = (unlink(buf) == 0);
+                    }
+                }
+                else
+                {
+                    result = false;
+                }
+                free(buf);
+            }
+            else
+            {
+                result = false;
+            }
+        }
+        closedir(dir);
+    }
+    else
+    {
+        result = false;
+    }
+
+    if (result)
+    {
+        // Remove the empty directory
+        result = (rmdir(path) == 0);
+    }
+
+    return result;
+}

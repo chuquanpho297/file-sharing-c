@@ -768,12 +768,8 @@ bool db_move_folder(const char *folder_id, const char *parent_folder_id,
     return success;
 }
 
-bool db_delete_folder(const char *folder_id)
+bool db_delete_all_contents_folder(MYSQL *conn, const char *folder_id)
 {
-    MYSQL *conn = db_connect();
-    if (!conn)
-        return false;
-
     // First, recursively get and delete all subfolders
     char query[512];
     snprintf(query, sizeof(query),
@@ -785,7 +781,6 @@ bool db_delete_folder(const char *folder_id)
     if (mysql_query(conn, query))
     {
         printf("Get subfolders failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
         return false;
     }
 
@@ -793,7 +788,6 @@ bool db_delete_folder(const char *folder_id)
     if (!result)
     {
         printf("Get subfolders failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
         return false;
     }
 
@@ -801,10 +795,9 @@ bool db_delete_folder(const char *folder_id)
     MYSQL_ROW row;
     while ((row = mysql_fetch_row(result)))
     {
-        if (!db_delete_folder(row[0]))
+        if (!db_delete_all_contents_folder(conn, row[0]))
         {
             mysql_free_result(result);
-            db_disconnect(conn);
             return false;
         }
     }
@@ -817,7 +810,6 @@ bool db_delete_folder(const char *folder_id)
     if (mysql_query(conn, query))
     {
         printf("Delete files failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
         return false;
     }
 
@@ -828,12 +820,20 @@ bool db_delete_folder(const char *folder_id)
     if (mysql_query(conn, query))
     {
         printf("Delete folder failed: %s\n", mysql_error(conn));
-        db_disconnect(conn);
         return false;
     }
 
-    db_disconnect(conn);
     return true;
+}
+
+bool db_delete_folder(const char *folder_id)
+{
+    MYSQL *conn = db_connect();
+    if (!conn)
+        return false;
+    bool result = db_delete_all_contents_folder(conn, folder_id);
+    db_disconnect(conn);
+    return result;
 }
 
 bool db_rename_folder(const char *folder_id, const char *new_name)

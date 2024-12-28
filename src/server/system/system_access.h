@@ -38,5 +38,6 @@ void get_last_two_elements(const char *input, char *result1, char *result2,
                            char *delimiter);
 const char *get_folder_path(const char *file_path);
 bool move_folder(const char *from_folder_path, const char *to_folder_path);
+bool remove_directory(const char *path);
 
 #endif  // SYSTEM_ACCESS_H
