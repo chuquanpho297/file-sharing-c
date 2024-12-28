@@ -12,6 +12,7 @@
 #include "./utils/helper.h"
 #include "./utils/structs.h"
 #include "utils/config.h"
+#include "client.h"
 
 int main()
 {

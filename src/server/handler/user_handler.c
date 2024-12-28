@@ -56,7 +56,7 @@ void handle_register(client_t *client, const char *buffer)
         client->is_logged_in = 1;
         snprintf(path, sizeof(path), "%s/%s", config->root_folder,
                  client->username);
-
+        printf("%s\n", path);
         struct stat st = {0};
         if (stat(path, &st) == 0)
         {

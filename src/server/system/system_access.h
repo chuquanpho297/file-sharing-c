@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zip.h>
+#include <stdlib.h>
 
 // Function prototypes
 bool copy_file(const char *src_path, const char *dest_path);
