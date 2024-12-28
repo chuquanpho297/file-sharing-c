@@ -103,6 +103,10 @@ void print_file_table(struct json_object *files)
            "File Name", "Size", "Access", "Created By", "Created At",
            "File Path");
 
+    if (json_object_get_type(files) != json_type_array) {
+        fprintf(stderr, "Error: Expected a JSON array\n");
+        return;
+    }
     int array_size = json_object_array_length(files);
     for (int i = 0; i < array_size; i++)
     {
