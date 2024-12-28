@@ -559,10 +559,9 @@ void handle_file_download(client_t *client, const char *buffer)
     const char *file_path = json_object_get_string(file_path_obj);
     const char *file_path_copy = strdup(file_path);
     const char *file_owner = file_owner_obj ? json_object_get_string(file_owner_obj) : client->username;
-    printf("File owner: %s\n", file_owner);
+
     char *token = strtok((char *)file_path_copy, "/");
     char *parent_id = db_get_root_folder_id(file_owner);
-    printf("Parent id: %s\n", parent_id);
     char *file_id = NULL;
     char *file_name = NULL;
     char *folder_name = token;
@@ -577,12 +576,14 @@ void handle_file_download(client_t *client, const char *buffer)
             printf("File id: %s\n", file_id);
             if (file_id == NULL)
             {
+                printf("File not found\n");
                 send_response(client->socket, 404, "File not found");
                 json_object_put(parsed_json);
                 return;
             }
             if (strcmp(db_get_file_access(file_id), "download") != 0)
             {
+                printf("File access denied\n");
                 send_response(client->socket, 403, "File access denied");
                 json_object_put(parsed_json);
                 return;
@@ -593,6 +594,7 @@ void handle_file_download(client_t *client, const char *buffer)
             parent_id = db_get_folder_id(file_name, file_owner, parent_id);
             if (parent_id == NULL)
             {
+                printf("Folder not found\n");
                 send_response(client->socket, 404, "Folder not found");
                 json_object_put(parsed_json);
                 return;

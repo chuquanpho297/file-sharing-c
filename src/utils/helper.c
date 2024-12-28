@@ -21,6 +21,7 @@ void clear_line()
 
 void send_response(int socket, int code, const char *message)
 {
+    printf("Sending response: %d %s\n", code, message);
     struct json_object *jobj = json_object_new_object();
     struct json_object *jpayload = json_object_new_object();
 
