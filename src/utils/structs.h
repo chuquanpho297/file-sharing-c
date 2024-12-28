@@ -1,4 +1,4 @@
-#include "./config.h";
+#include "./config.h"
 
 #ifndef STRUCTS_H
 #define STRUCTS_H

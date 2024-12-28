@@ -243,9 +243,16 @@ void handle_folder_upload(client_t *client, const char *buffer)
         return;
     }
 
-    char *upload_folder_path[MAX_PATH_LENGTH];
-    snprintf(upload_folder_path, MAX_PATH_LENGTH, "%s/%s",
-             parent_upload_folder_path, folder_name);
+    char upload_folder_path[MAX_PATH_LENGTH];
+    int written = snprintf(upload_folder_path, sizeof(upload_folder_path), "%s/%s",
+                           parent_upload_folder_path, folder_name);
+    if (written >= sizeof(upload_folder_path)) {
+        send_response(client->socket, 500, "Path too long");
+        json_object_put(parsed_json);
+        free(folder_path);
+        free(path_copy);
+        return;
+    }
 
     // Create empty upload folder
     if (!create_directories(upload_folder_path))
@@ -289,7 +296,7 @@ void handle_folder_upload(client_t *client, const char *buffer)
 
         if (strcmp(buffer, CLIENT_ERROR) == 0)
         {
-            printf("Failed to receive file: %s\n", file_count);
+            printf("Failed to receive file: %d\n", file_count);
             file_count++;
             continue;
         }
@@ -298,11 +305,11 @@ void handle_folder_upload(client_t *client, const char *buffer)
         struct json_object *file_path_obj, *file_size_obj;
         json_object_object_get_ex(file_info, "filePath", &file_path_obj);
         json_object_object_get_ex(file_info, "fileSize", &file_size_obj);
-        char *short_file_path = json_object_get_string(file_path_obj);
+        const char *short_file_path = json_object_get_string(file_path_obj);
         long file_size = json_object_get_int64(file_size_obj);
 
-        char *file_path[MAX_PATH_LENGTH];
-        snprintf(file_path, sizeof(file_path) + 1, "%s/%s/%s",
+        char file_path[MAX_PATH_LENGTH];
+        snprintf(file_path, sizeof(file_path), "%s/%s/%s",
                  config->root_folder, client->username, short_file_path);
 
         // Create directories if they do not exist
@@ -329,10 +336,10 @@ void handle_folder_upload(client_t *client, const char *buffer)
         receive_write_file(client->socket, file_size, file);
 
         // Update db
-        char *short_folder_path = get_folder_path(short_file_path);
+        const char *short_folder_path = get_folder_path(short_file_path);
         char *sub_parent_id =
             db_get_folder_id(folder_name, client->username, parent_id);
-        char *sub_folder = strtok(short_folder_path, "/");
+        char *sub_folder = strtok((char *)short_folder_path, "/");
         sub_folder = strtok(NULL, "/");  // Skip the upload folder name
 
         // create sub folders
@@ -409,7 +416,7 @@ void handle_folder_download(client_t *client, const char *buffer)
         token = strtok(NULL, "/");
     }
 
-    const exact_folder_path[MAX_PATH_LENGTH];
+    char exact_folder_path[MAX_PATH_LENGTH];
 
     if (folder_path == "")
     {
@@ -423,18 +430,24 @@ void handle_folder_download(client_t *client, const char *buffer)
 
     printf("Compressing folder...\n");
     // Check if temp_folder_path exists, if not, create it
-    const char *temp_folder_path[MAX_PATH_LENGTH];
+     char temp_folder_path[MAX_PATH_LENGTH];
     snprintf(temp_folder_path, MAX_PATH_LENGTH, "%s/%s", config->temp_folder,
              client->username);
 
     create_directories(temp_folder_path);
     // Zip the folder
-    const char temp_zip_folder_path[MAX_PATH_LENGTH];
-    const char temp_zip_folder_name[MAX_FOLDER_NAME];
+    char temp_zip_folder_path[MAX_PATH_LENGTH];
+    char temp_zip_folder_name[MAX_PATH_LENGTH];
 
-    snprintf(temp_zip_folder_name, MAX_FOLDER_NAME, "%s.zip", folder_name);
-    snprintf(temp_zip_folder_path, MAX_PATH_LENGTH, "%s/%s", temp_folder_path,
-             temp_zip_folder_name);
+    snprintf(temp_zip_folder_name, sizeof(temp_zip_folder_name), "%s.zip", folder_name);
+    if (snprintf(temp_zip_folder_path, sizeof(temp_zip_folder_path), "%s/%s", temp_folder_path,
+                 temp_zip_folder_name) >= sizeof(temp_zip_folder_path)) {
+        send_response(client->socket, 500, "Path too long");
+        json_object_put(parsed_json);
+        free(folder_path);
+        free(path_copy);
+        return;
+    }
 
     printf("Compressing folder to %s\n", temp_zip_folder_path);
     printf("Folder path: %s\n", exact_folder_path);
@@ -468,7 +481,7 @@ void handle_folder_download(client_t *client, const char *buffer)
             response_payload, "message",
             json_object_new_string("Ready to download folder"));
         json_object_object_add(response, "payload", response_payload);
-        char *response_str = json_object_to_json_string(response);
+        const char *response_str = json_object_to_json_string(response);
         send(client->socket, response_str, strlen(response_str), 0);
 
         json_object_put(response);
@@ -811,7 +824,7 @@ void handle_folder_delete(client_t *client, const char *buffer)
     }
 
     // Construct the new folder path
-    const exact_path[MAX_PATH_LENGTH];
+    char exact_path[MAX_PATH_LENGTH];
 
     snprintf(exact_path, MAX_PATH_LENGTH, "%s/%s/%s", config->root_folder,
              client->username, folder_path);
