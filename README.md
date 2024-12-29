@@ -6,6 +6,7 @@ Before you begin, ensure you have the following installed on your system:
 
 ### On Ubuntu
 - CMake (version 3.22 or higher)
+- Mysql 8.0
 - Libraries: `json-c`, `libzip`, `mysqlclient`, and `clang-format`
 
   ```bash
