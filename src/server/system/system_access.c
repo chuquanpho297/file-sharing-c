@@ -544,13 +544,13 @@ void read_send_file(int socket, long file_size, FILE *fp)
         }
 
         // Wait for acknowledgment
-        if (recv(socket, &send_data, sizeof(send_data), 0) < 0)
-        {
-            perror("Failed to receive acknowledgment");
-            break;
-        }
+        // if (recv(socket, &send_data, sizeof(send_data), 0) < 0)
+        // {
+        //     perror("Failed to receive acknowledgment");
+        //     break;
+        // }
 
-        byte_send += send_data;
+        byte_send += data;
         printf("Progress: %ld/%ld bytes\r", byte_send, file_size);
         fflush(stdout);
     }

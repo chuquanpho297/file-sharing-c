@@ -77,6 +77,7 @@ void handle_register(client_t *client, const char *buffer)
             }
             else
             {
+                perror("mkdir");
                 send_response(client->socket, 501, "Failed to create folder");
             }
         }

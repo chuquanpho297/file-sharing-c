@@ -180,7 +180,9 @@ void handle_folder_upload(client_t *client, const char *buffer)
         parent_id = db_get_folder_id(parent_folder, client->username, parent_id);
         if (parent_id == NULL)
         {
-            send_response(client->socket, 404, strcat("Folder not found: ", parent_folder));
+            char error_msg[256];  // Create a buffer with sufficient size
+            snprintf(error_msg, sizeof(error_msg), "Folder not found: %s", parent_folder);
+            send_response(client->socket, 404, error_msg);
             json_object_put(parsed_json);
             free(folder_path);
             free(path_copy);
@@ -332,10 +334,12 @@ void handle_folder_upload(client_t *client, const char *buffer)
 
         log_operation(client->username, "FILE_UPLOAD", file_path, "SUCCESS");
 
-        file_count++;
-        printf("File count: %d/%d\n", file_count, file_number);
-
         json_object_put(file_info);
+        file_count++;
+
+        char message[256];
+        snprintf(message, sizeof(message), "Files: %d/%d", file_count, file_number);
+        send_response(client->socket, 200, message);
     }
 
     log_operation(client->username, "FOLDER_UPLOAD", upload_folder_path, "SUCCESS");

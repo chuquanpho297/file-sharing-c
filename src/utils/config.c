@@ -33,7 +33,10 @@ Config *get_config()
     char *last_slash = strrchr(cwd, '/');
     *last_slash = '\0';
 
-    load_env_from_file(strcat(cwd, "/.env"));
+    char env_path[2048];
+    snprintf(env_path, sizeof(env_path), "%s/.env", cwd);
+
+    load_env_from_file(env_path);
 
     load_config(config);
 

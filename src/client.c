@@ -630,7 +630,7 @@ void handle_logout(int sock, int *is_logged_in, char *current_user)
     handle_print_payload_response(buffer, print_message_oneline);
 
     *is_logged_in = 0;
-    strcpy(current_user, "");
+    current_user[0] = '\0';
 }
 
 // TODO: handle folder content
@@ -912,6 +912,10 @@ void send_folder(int sock, const char *upload_folder_path, const char *des_folde
 
             json_object_put(parsed_json);
             json_object_put(jpayload);
+            fclose(file);
+
+            recv(sock, buffer, BUFFER_SIZE, 0);
+            handle_print_payload_response(buffer, print_message_oneline);
         }
     }
 
