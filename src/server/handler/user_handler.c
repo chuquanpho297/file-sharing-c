@@ -53,7 +53,6 @@ void handle_register(client_t *client, const char *buffer)
     {
         char path[1024];
         strncpy(client->username, username, MAX_USERNAME - 1);
-        client->is_logged_in = 1;
         snprintf(path, sizeof(path), "%s/%s", config->root_folder, client->username);
         printf("%s\n", path);
         struct stat st = {0};
@@ -66,8 +65,15 @@ void handle_register(client_t *client, const char *buffer)
         {
             if (mkdir(path, 0777) == 0)
             {
-                db_create_root_folder(client->username);
-                send_response(client->socket, 201, "Registration successful");
+                if (db_create_root_folder(client->username))
+                {
+                    client->is_logged_in = 1;
+                    send_response(client->socket, 201, "Registration successful");
+                }
+                else
+                {
+                    send_response(client->socket, 500, "Failed to create root folder");
+                }
             }
             else
             {

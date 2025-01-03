@@ -492,7 +492,7 @@ void receive_write_file(int socket, long file_size, FILE *fp)
     long total_received = 0;
     int bytes_received;
 
-    while ( total_received < file_size && (bytes_received = recv(socket, buffer, sizeof(buffer), 0)) > 0)
+    while (total_received < file_size && (bytes_received = recv(socket, buffer, sizeof(buffer), 0)) > 0)
     {
         if (bytes_received < 0)
         {
