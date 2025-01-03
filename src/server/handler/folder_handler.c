@@ -297,6 +297,7 @@ void handle_folder_upload(client_t *client, const char *buffer)
             *last_slash = '\0';
             if (!create_directories(file_path))
             {
+                log_operation(client->username, "FOLDER_UPLOAD", upload_folder_path, "FAILED");
                 send_response(client->socket, 500, "Failed to create folder");
                 json_object_put(file_info);
                 free(folder_path);
@@ -331,8 +332,6 @@ void handle_folder_upload(client_t *client, const char *buffer)
         }
 
         db_create_file(get_filename(file_path), file_size, sub_parent_id, client->username);
-
-        log_operation(client->username, "FILE_UPLOAD", file_path, "SUCCESS");
 
         json_object_put(file_info);
         file_count++;
@@ -391,6 +390,16 @@ void handle_folder_download(client_t *client, const char *buffer)
         token = strtok(NULL, "/");
     }
 
+    if (strcmp(db_get_folder_access(parent_id), "download") != 0)
+    {
+        printf("Folder access denied\n");
+        send_response(client->socket, 403, "Folder access denied");
+        json_object_put(parsed_json);
+        free(folder_path);
+        free(path_copy);
+        return;
+    }
+
     char exact_folder_path[MAX_PATH_LENGTH];
 
     if (folder_path == NULL || strlen(folder_path) == 0)
@@ -426,6 +435,7 @@ void handle_folder_download(client_t *client, const char *buffer)
     printf("Folder path: %s\n", exact_folder_path);
     if (!compress_folder(exact_folder_path, temp_zip_folder_path))
     {
+        log_operation(client->username, "FOLDER_DOWNLOAD", folder_path, "FAILED");
         send_response(client->socket, 500, "Failed to compress folder");
         json_object_put(parsed_json);
         free(folder_path);
@@ -460,6 +470,7 @@ void handle_folder_download(client_t *client, const char *buffer)
 
         if (strcmp(buffer, "OK") != 0)
         {
+            log_operation(client->username, "FOLDER_DOWNLOAD", folder_path, "FAILED");
             send_response(client->socket, 500, "Failed to download folder");
             json_object_put(parsed_json);
             free(folder_path);
