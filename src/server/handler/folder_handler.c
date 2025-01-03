@@ -366,7 +366,7 @@ void handle_folder_download(client_t *client, const char *buffer)
     char *folder_path = strdup(json_object_get_string(folder_path_obj));
     const char *folder_owner = json_object_get_string(folder_owner_obj);
 
-    if (folder_owner == "")
+    if (folder_owner == NULL || strlen(folder_owner) == 0)
     {
         folder_owner = client->username;
     }
@@ -393,7 +393,7 @@ void handle_folder_download(client_t *client, const char *buffer)
 
     char exact_folder_path[MAX_PATH_LENGTH];
 
-    if (folder_path == "")
+    if (folder_path == NULL || strlen(folder_path) == 0)
     {
         folder_name = client->username;
         snprintf(exact_folder_path, MAX_PATH_LENGTH, "%s/%s", config->root_folder, folder_owner);
