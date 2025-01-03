@@ -117,6 +117,7 @@ void handle_file_create(client_t *client, const char *buffer)
 
         // Add logging
         log_operation(client->username, "FILE_UPLOAD", file_path, "SUCCESS");
+        fclose(fp);
     }
     else
     {
@@ -630,6 +631,7 @@ void handle_file_download(client_t *client, const char *buffer)
 
         // Add logging
         log_operation(client->username, "FILE_DOWNLOAD", file_path, "SUCCESS");
+        fclose(fp);
     }
     else
     {

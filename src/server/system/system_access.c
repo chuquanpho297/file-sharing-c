@@ -519,7 +519,7 @@ void receive_write_file(int socket, long file_size, FILE *fp)
         // }
     }
     printf("\n");
-    fclose(fp);
+    // fclose(fp);
 }
 
 void read_send_file(int socket, long file_size, FILE *fp)

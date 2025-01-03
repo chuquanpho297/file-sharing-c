@@ -775,6 +775,7 @@ void handle_folder_download_client(int sock, const char *folder_path, const char
         send(sock, "OK", strlen("OK"), 0);
 
         receive_write_file(sock, file_size, f);
+        fclose(f);
         printf("\nDownload succeed!\n");
     }
 

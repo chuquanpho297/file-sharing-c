@@ -312,7 +312,7 @@ void handle_folder_upload(client_t *client, const char *buffer)
 
         printf("Receiving file: %s\n", file_path);
         receive_write_file(client->socket, file_size, file);
-
+        fclose(file);
         // Update db
         const char *short_folder_path = get_folder_path(short_file_path);
         char *sub_parent_id = db_get_folder_id(folder_name, client->username, parent_id);
@@ -468,6 +468,7 @@ void handle_folder_download(client_t *client, const char *buffer)
         }
 
         read_send_file(client->socket, file_size, fp);
+        fclose(fp);
         remove(temp_zip_folder_path);
 
         // Add logging
